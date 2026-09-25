@@ -505,13 +505,13 @@ app.delete("/api/words/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-// Set status: known / unsure
+// Set status: known / unsure / review
 app.post("/api/words/:id/status", async (req, res) => {
   const data = await loadData();
   const word = data.words[req.params.id];
   if (!word) return res.status(404).json({ error: "Không tìm thấy từ" });
   const { status } = req.body;
-  if (status !== "known" && status !== "unsure")
+  if (status !== "known" && status !== "unsure" && status !== "review")
     return res.status(400).json({ error: "status không hợp lệ" });
   word.status = status;
   word.lastReviewed = todayStr();

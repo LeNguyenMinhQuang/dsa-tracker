@@ -624,6 +624,17 @@ async function saveSettings() {
 
 // ===================== Vocabulary =====================
 
+// 3 trạng thái cho mỗi từ:
+// - unsure: chưa nhớ
+// - review: đã học nhưng chưa chắc lắm, cần kiểm tra lại
+// - known:  đã nhớ chắc
+const statusLabel = {
+  known: "Đã biết",
+  review: "Kiểm tra lại",
+  unsure: "Chưa nhớ",
+};
+const STATUS_ORDER = ["unsure", "review", "known"];
+
 const vocab = {
   words: [],
   groups: {}, // id -> group object
@@ -675,7 +686,17 @@ function initVocab() {
 
   document
     .getElementById("testModeBtn")
-    .addEventListener("click", openTestMode);
+    .addEventListener("click", openTestSetup);
+  document
+    .getElementById("testSetupCancel")
+    .addEventListener("click", closeTestSetup);
+  document
+    .getElementById("testSetupOverlay")
+    .addEventListener("click", closeTestSetup);
+  document
+    .getElementById("testSetupStart")
+    .addEventListener("click", startTestFromSetup);
+
   document.getElementById("testClose").addEventListener("click", closeTestMode);
   document
     .getElementById("testOverlay")
@@ -684,6 +705,9 @@ function initVocab() {
   document
     .getElementById("testKnown")
     .addEventListener("click", () => answerCard("known"));
+  document
+    .getElementById("testReview")
+    .addEventListener("click", () => answerCard("review"));
   document
     .getElementById("testStillUnsure")
     .addEventListener("click", () => answerCard("unsure"));
@@ -743,10 +767,12 @@ async function loadWords() {
 function updateVocabStats() {
   const total = vocab.words.length;
   const known = vocab.words.filter((w) => w.status === "known").length;
-  const unsure = total - known;
+  const review = vocab.words.filter((w) => w.status === "review").length;
+  const unsure = vocab.words.filter((w) => w.status === "unsure").length;
   document.getElementById("vocabStats").innerHTML =
-    `<span><b>${total}</b> từ</span><span><b>${known}</b> đã biết</span><span><b>${unsure}</b> chưa chắc</span>`;
-  document.getElementById("unsureCount").textContent = unsure;
+    `<span><b>${total}</b> từ</span><span><b>${known}</b> đã biết</span><span><b>${review}</b> kiểm tra lại</span><span><b>${unsure}</b> chưa nhớ</span>`;
+  // badge trên nút "Kiểm tra" = số từ chưa chắc chắn (chưa nhớ + kiểm tra lại)
+  document.getElementById("unsureCount").textContent = unsure + review;
 }
 
 function filteredWords() {
@@ -836,13 +862,20 @@ function buildWordCard(word) {
 
   const actions = document.createElement("div");
   actions.className = "word-card-actions";
-  const toggleBtn = document.createElement("button");
-  toggleBtn.className = "btn btn-secondary";
-  toggleBtn.textContent =
-    word.status === "known" ? "↺ Đánh dấu chưa chắc" : "✓ Đánh dấu đã biết";
-  toggleBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    setWordStatus(word.id, word.status === "known" ? "unsure" : "known");
+
+  // Chọn trạng thái trực tiếp: Chưa nhớ / Kiểm tra lại / Đã biết
+  const statusSeg = document.createElement("div");
+  statusSeg.className = "status-seg";
+  STATUS_ORDER.forEach((st) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `status-seg-btn status-${st}-btn${word.status === st ? " active" : ""}`;
+    btn.textContent = statusLabel[st];
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (word.status !== st) setWordStatus(word.id, st);
+    });
+    statusSeg.appendChild(btn);
   });
 
   const editBtn = document.createElement("button");
@@ -853,7 +886,7 @@ function buildWordCard(word) {
     openWordModal(word);
   });
 
-  actions.appendChild(toggleBtn);
+  actions.appendChild(statusSeg);
   actions.appendChild(editBtn);
   body.appendChild(actions);
 
@@ -978,9 +1011,65 @@ async function deleteWord() {
   }
 }
 
+// ---------- Test setup (choose which pools to test) ----------
+
+function poolFor(statuses) {
+  return vocab.words.filter(
+    (w) =>
+      statuses.includes(w.status) &&
+      (!vocab.groupFilter || w.groupId === vocab.groupFilter),
+  );
+}
+
+function openTestSetup() {
+  document.getElementById("testSetupUnsureCount").textContent = poolFor([
+    "unsure",
+  ]).length;
+  document.getElementById("testSetupReviewCount").textContent = poolFor([
+    "review",
+  ]).length;
+  document.getElementById("testSetupKnownCount").textContent = poolFor([
+    "known",
+  ]).length;
+
+  document.getElementById("testSetupHint").textContent = vocab.groupFilter
+    ? `Chỉ tính từ trong chủ đề đang lọc: ${groupLabel(vocab.groupFilter)}`
+    : "Tính trên toàn bộ kho từ vựng (không lọc theo chủ đề).";
+
+  // mặc định chọn sẵn "Chưa nhớ" + "Kiểm tra lại", bỏ "Đã biết"
+  document.getElementById("testSetupUnsure").checked = true;
+  document.getElementById("testSetupReview").checked = true;
+  document.getElementById("testSetupKnown").checked = false;
+
+  document.getElementById("testSetupOverlay").classList.add("show");
+  document.getElementById("testSetupModal").classList.add("show");
+}
+
+function closeTestSetup() {
+  document.getElementById("testSetupOverlay").classList.remove("show");
+  document.getElementById("testSetupModal").classList.remove("show");
+}
+
+function startTestFromSetup() {
+  const statuses = [];
+  if (document.getElementById("testSetupUnsure").checked)
+    statuses.push("unsure");
+  if (document.getElementById("testSetupReview").checked)
+    statuses.push("review");
+  if (document.getElementById("testSetupKnown").checked) statuses.push("known");
+
+  if (statuses.length === 0) {
+    alert("Chọn ít nhất 1 nhóm để kiểm tra.");
+    return;
+  }
+
+  closeTestSetup();
+  openTestMode(statuses);
+}
+
 // ---------- Test mode (flashcards) ----------
 
-const testState = { queue: [], index: 0, known: 0, stillUnsure: 0 };
+const testState = { queue: [], index: 0, known: 0, review: 0, stillUnsure: 0 };
 
 function shuffle(arr) {
   const a = [...arr];
@@ -991,16 +1080,12 @@ function shuffle(arr) {
   return a;
 }
 
-function openTestMode() {
+function openTestMode(statuses) {
   // test mode respects the current group filter (if any) so the user can drill one topic at a time
-  const pool = vocab.groupFilter
-    ? vocab.words.filter(
-        (w) => w.status === "unsure" && w.groupId === vocab.groupFilter,
-      )
-    : vocab.words.filter((w) => w.status === "unsure");
-  testState.queue = shuffle(pool);
+  testState.queue = shuffle(poolFor(statuses));
   testState.index = 0;
   testState.known = 0;
+  testState.review = 0;
   testState.stillUnsure = 0;
 
   document.getElementById("testOverlay").classList.add("show");
@@ -1015,7 +1100,7 @@ function openTestMode() {
     document.getElementById("testDone").style.display = "block";
     document.getElementById("testProgress").textContent = "0 / 0";
     document.getElementById("testDoneSummary").textContent =
-      'Không còn từ nào ở trạng thái "chưa chắc" để kiểm tra. Hãy thêm từ mới hoặc đánh dấu lại một số từ!';
+      "Không có từ nào trong (các) nhóm bạn đã chọn. Hãy chọn nhóm khác hoặc thêm từ mới!";
     return;
   }
   renderTestCard();
@@ -1059,6 +1144,7 @@ async function answerCard(result) {
     body: JSON.stringify({ status: result }),
   });
   if (result === "known") testState.known++;
+  else if (result === "review") testState.review++;
   else testState.stillUnsure++;
 
   testState.index++;
@@ -1067,7 +1153,7 @@ async function answerCard(result) {
     document.getElementById("testActions").style.display = "none";
     document.getElementById("testDone").style.display = "block";
     document.getElementById("testDoneSummary").textContent =
-      `Đã nhớ: ${testState.known} từ · Vẫn chưa chắc: ${testState.stillUnsure} từ`;
+      `Đã nhớ: ${testState.known} từ · Kiểm tra lại: ${testState.review} từ · Chưa nhớ: ${testState.stillUnsure} từ`;
   } else {
     renderTestCard();
   }

@@ -1,581 +1,697 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DSA Tracker</title>
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2311151C%22/><text x=%2250%22 y=%2266%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22%235B8CFF%22 font-family=%22monospace%22>&lt;/&gt;</text></svg>">
-  <link rel="stylesheet" href="style.css">
-  <style>
-    /* ---- Bổ sung style cho các phần tử mới của tính năng Từ vựng TOEIC ----
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DSA Tracker</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2311151C%22/><text x=%2250%22 y=%2266%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22%235B8CFF%22 font-family=%22monospace%22>&lt;/&gt;</text></svg>"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* ---- Bổ sung style cho các phần tử mới của tính năng Từ vựng TOEIC ----
      (Không đụng tới style.css gốc, chỉ thêm phần cần cho phát âm / nhóm chủ đề) */
-    .word-pron {
-      font-size: 0.85em;
-      opacity: 0.65;
-      font-style: italic;
-      margin-left: 6px;
-      font-weight: 400;
-    }
+      .word-pron {
+        font-size: 0.85em;
+        opacity: 0.65;
+        font-style: italic;
+        margin-left: 6px;
+        font-weight: 400;
+      }
 
-    .group-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.72em;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: rgba(91, 140, 255, 0.15);
-      color: #5B8CFF;
-      white-space: nowrap;
-      font-weight: 600;
-    }
+      .group-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72em;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(91, 140, 255, 0.15);
+        color: #5b8cff;
+        white-space: nowrap;
+        font-weight: 600;
+      }
 
-    .meaning-explain {
-      font-size: 0.85em;
-      opacity: 0.7;
-      font-style: italic;
-      margin: 2px 0 4px;
-    }
+      .meaning-explain {
+        font-size: 0.85em;
+        opacity: 0.7;
+        font-style: italic;
+        margin: 2px 0 4px;
+      }
 
-    .vocab-toolbar-row2 {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
+      .vocab-toolbar-row2 {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
 
-    .group-select {
-      flex: 1;
-      min-width: 0;
-      padding: 8px 10px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.06);
-      color: inherit;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      font-size: 0.9em;
-    }
+      .group-select {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 0.9em;
+      }
 
-    .field-label-inline {
-      font-size: 0.8em;
-      opacity: 0.65;
-      margin-top: 10px;
-      margin-bottom: 4px;
-      display: block;
-    }
+      .field-label-inline {
+        font-size: 0.8em;
+        opacity: 0.65;
+        margin-top: 10px;
+        margin-bottom: 4px;
+        display: block;
+      }
 
-    .word-card-head-top {
-      display: flex;
-      align-items: baseline;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
+      .word-card-head-top {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
 
-    /* ---- Bổ sung style cho tính năng Checklist ---- */
-    .checklist-toolbar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
+      /* ---- Bổ sung style cho tính năng Checklist ---- */
+      .checklist-toolbar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
 
-    .checklist-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 12px;
-    }
+      .checklist-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+      }
 
-    .checklist-card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-    }
+      .checklist-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 14px 16px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
 
-    .checklist-card:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(91, 140, 255, 0.4);
-    }
+      .checklist-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(91, 140, 255, 0.4);
+      }
 
-    .checklist-card-name {
-      font-weight: 600;
-      margin-bottom: 4px;
-      word-break: break-word;
-    }
+      .checklist-card-name {
+        font-weight: 600;
+        margin-bottom: 4px;
+        word-break: break-word;
+      }
 
-    .checklist-card-meta {
-      font-size: 0.8em;
-      opacity: 0.65;
-      margin-bottom: 10px;
-    }
+      .checklist-card-meta {
+        font-size: 0.8em;
+        opacity: 0.65;
+        margin-bottom: 10px;
+      }
 
-    .checklist-progress-track {
-      height: 6px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      overflow: hidden;
-    }
+      .checklist-progress-track {
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
 
-    .checklist-progress-fill {
-      height: 100%;
-      background: #5B8CFF;
-      border-radius: 999px;
-      transition: width 0.2s;
-    }
+      .checklist-progress-fill {
+        height: 100%;
+        background: #5b8cff;
+        border-radius: 999px;
+        transition: width 0.2s;
+      }
 
-    .checklist-items-empty {
-      opacity: 0.6;
-      font-size: 0.9em;
-      padding: 12px 0;
-    }
+      .checklist-items-empty {
+        opacity: 0.6;
+        font-size: 0.9em;
+        padding: 12px 0;
+      }
 
-    .checklist-item-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    }
+      .checklist-item-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
 
-    .checklist-item-row:last-child {
-      border-bottom: none;
-    }
+      .checklist-item-row:last-child {
+        border-bottom: none;
+      }
 
-    .checklist-check {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      flex: 1;
-      min-width: 0;
-    }
+      .checklist-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        flex: 1;
+        min-width: 0;
+      }
 
-    .checklist-check input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-      accent-color: #5B8CFF;
-      cursor: pointer;
-    }
+      .checklist-check input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        accent-color: #5b8cff;
+        cursor: pointer;
+      }
 
-    .checklist-item-text {
-      word-break: break-word;
-    }
+      .checklist-item-text {
+        word-break: break-word;
+      }
 
-    .checklist-item-text.done {
-      text-decoration: line-through;
-      opacity: 0.5;
-    }
+      .checklist-item-text.done {
+        text-decoration: line-through;
+        opacity: 0.5;
+      }
 
-    .checklist-item-remove {
-      background: none;
-      border: none;
-      color: inherit;
-      opacity: 0.45;
-      cursor: pointer;
-      font-size: 0.95em;
-      padding: 4px 6px;
-      flex-shrink: 0;
-    }
+      .checklist-item-remove {
+        background: none;
+        border: none;
+        color: inherit;
+        opacity: 0.45;
+        cursor: pointer;
+        font-size: 0.95em;
+        padding: 4px 6px;
+        flex-shrink: 0;
+      }
 
-    .checklist-item-remove:hover {
-      opacity: 1;
-      color: #ff6b6b;
-    }
+      .checklist-item-remove:hover {
+        opacity: 1;
+        color: #ff6b6b;
+      }
 
-    .checklist-add-item-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 14px;
-    }
+      .checklist-add-item-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
 
-    .checklist-add-item-row input {
-      flex: 1;
-    }
+      .checklist-add-item-row input {
+        flex: 1;
+      }
 
-    .checklist-panel-meta {
-      font-size: 0.85em;
-      opacity: 0.65;
-      margin-bottom: 16px;
-    }
+      .checklist-panel-meta {
+        font-size: 0.85em;
+        opacity: 0.65;
+        margin-bottom: 16px;
+      }
 
-    .import-textarea {
-      width: 100%;
-      min-height: 220px;
-      font-family: monospace;
-      font-size: 0.85em;
-      padding: 10px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.05);
-      color: inherit;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      resize: vertical;
-      box-sizing: border-box;
-    }
+      .import-textarea {
+        width: 100%;
+        min-height: 220px;
+        font-family: monospace;
+        font-size: 0.85em;
+        padding: 10px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        color: inherit;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        resize: vertical;
+        box-sizing: border-box;
+      }
 
-    .import-error {
-      color: #ff6b6b;
-      font-size: 0.85em;
-      margin-top: 8px;
-      min-height: 1.2em;
-    }
+      .import-error {
+        color: #ff6b6b;
+        font-size: 0.85em;
+        margin-top: 8px;
+        min-height: 1.2em;
+      }
 
-    .import-help {
-      font-size: 0.8em;
-      opacity: 0.65;
-      margin: 8px 0;
-      line-height: 1.5;
-    }
+      .import-help {
+        font-size: 0.8em;
+        opacity: 0.65;
+        margin: 8px 0;
+        line-height: 1.5;
+      }
 
-    .import-help code {
-      background: rgba(255, 255, 255, 0.08);
-      padding: 1px 5px;
-      border-radius: 4px;
-    }
+      .import-help code {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
 
-    .import-file-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
+      .import-file-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
 
-    /* ---- Bổ sung style cho panel ngày: nhiều bài mới / ôn tập / random ---- */
-    .panel-section-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-      color: var(--text-muted);
-      margin: 4px 2px 2px;
-      font-weight: 700;
-    }
+      /* ---- Bổ sung style cho panel ngày: nhiều bài mới / ôn tập / random ---- */
+      .panel-section-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        margin: 4px 2px 2px;
+        font-weight: 700;
+      }
 
-    .review-items {
-      display: flex;
-      flex-direction: column;
-    }
+      .review-items {
+        display: flex;
+        flex-direction: column;
+      }
 
-    .review-item-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
-    }
+      .review-item-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+      }
 
-    .review-item-row:last-child {
-      border-bottom: none;
-    }
+      .review-item-row:last-child {
+        border-bottom: none;
+      }
 
-    .review-item-info {
-      flex: 1;
-      min-width: 0;
-    }
+      .review-item-info {
+        flex: 1;
+        min-width: 0;
+      }
 
-    .review-item-actions {
-      display: flex;
-      gap: 6px;
-      flex-shrink: 0;
-    }
+      .review-item-actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
 
-    .review-item-actions .btn {
-      flex: none;
-      padding: 8px 10px;
-      font-size: 11px;
-    }
+      .review-item-actions .btn {
+        flex: none;
+        padding: 8px 10px;
+        font-size: 11px;
+      }
 
-    .review-item-empty {
-      color: var(--text-muted);
-      font-style: italic;
-      font-size: 12px;
-      padding: 4px 0;
-    }
+      .review-item-empty {
+        color: var(--text-muted);
+        font-style: italic;
+        font-size: 12px;
+        padding: 4px 0;
+      }
 
-    /* ---- Bổ sung style cho Cài đặt: số lượng bài + nhiều vòng ôn tập ---- */
-    .review-intervals-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
+      /* ---- Bổ sung style cho Cài đặt: số lượng bài + nhiều vòng ôn tập ---- */
+      .review-intervals-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
 
-    .review-interval-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+      .review-interval-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
 
-    .review-interval-row input[type="number"] {
-      width: 70px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 9px;
-      border-radius: 7px;
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-    }
+      .review-interval-row input[type="number"] {
+        width: 70px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 8px 9px;
+        border-radius: 7px;
+        font-family: "Inter", sans-serif;
+        font-size: 13px;
+      }
 
-    .review-interval-suffix {
-      font-size: 12px;
-      color: var(--text-muted);
-      flex: 1;
-    }
+      .review-interval-suffix {
+        font-size: 12px;
+        color: var(--text-muted);
+        flex: 1;
+      }
 
-    .remove-review-interval {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 14px;
-      padding: 4px 6px;
-    }
+      .remove-review-interval {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 4px 6px;
+      }
 
-    .remove-review-interval:hover {
-      color: #F87171;
-    }
-  </style>
-</head>
+      .remove-review-interval:hover {
+        color: #f87171;
+      }
+    </style>
+  </head>
 
-<body>
-  <div class="app">
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark">&lt;/&gt;</span>
-        <div class="brand-text">
-          <h1>DSA Tracker</h1>
-          <p>lịch luyện thuật toán</p>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">&lt;/&gt;</span>
+          <div class="brand-text">
+            <h1>DSA Tracker</h1>
+            <p>lịch luyện thuật toán</p>
+          </div>
         </div>
-      </div>
-      <button class="icon-btn" id="settingsBtn" title="Cài đặt">⚙</button>
-    </header>
+        <button class="icon-btn" id="settingsBtn" title="Cài đặt">⚙</button>
+      </header>
 
-    <nav class="tabs">
-      <button class="tab-btn active" id="tabBtnDsa" data-tab="dsa">📅 Lịch DSA</button>
-      <button class="tab-btn" id="tabBtnVocab" data-tab="vocab">📚 Từ vựng</button>
-      <button class="tab-btn" id="tabBtnChecklist" data-tab="checklist">✅ Checklist</button>
-    </nav>
+      <nav class="tabs">
+        <button class="tab-btn active" id="tabBtnDsa" data-tab="dsa">
+          📅 Lịch DSA
+        </button>
+        <button class="tab-btn" id="tabBtnVocab" data-tab="vocab">
+          📚 Từ vựng
+        </button>
+        <button class="tab-btn" id="tabBtnChecklist" data-tab="checklist">
+          ✅ Checklist
+        </button>
+      </nav>
 
-    <main class="content">
-      <section class="tab-panel active" id="tab-dsa">
-        <section class="calendar-card">
-          <div class="calendar-header">
-            <button class="nav-btn" id="prevMonth">‹</button>
-            <div class="month-label" id="monthLabel">—</div>
-            <button class="nav-btn" id="nextMonth">›</button>
+      <main class="content">
+        <section class="tab-panel active" id="tab-dsa">
+          <section class="calendar-card">
+            <div class="calendar-header">
+              <button class="nav-btn" id="prevMonth">‹</button>
+              <div class="month-label" id="monthLabel">—</div>
+              <button class="nav-btn" id="nextMonth">›</button>
+            </div>
+            <div class="weekday-row">
+              <span>T2</span><span>T3</span><span>T4</span><span>T5</span
+              ><span>T6</span><span>T7</span><span>CN</span>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <div class="legend">
+              <span class="legend-item"
+                ><i class="dot complete"></i> Hoàn thành</span
+              >
+              <span class="legend-item"
+                ><i class="dot incomplete"></i> Chưa xong</span
+              >
+              <span class="legend-item"><i class="dot today"></i> Hôm nay</span>
+              <span class="legend-item"><i class="dot diff-easy"></i> Dễ</span>
+              <span class="legend-item"
+                ><i class="dot diff-medium"></i> T.bình</span
+              >
+              <span class="legend-item"><i class="dot diff-hard"></i> Khó</span>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="tab-vocab">
+          <div class="vocab-toolbar">
+            <div class="vocab-search">
+              <span class="search-icon">⌕</span>
+              <input
+                type="text"
+                id="vocabSearch"
+                placeholder="Tìm từ, nghĩa hoặc chủ đề..."
+              />
+            </div>
+            <div class="vocab-filters" id="vocabFilters">
+              <button class="chip active" data-filter="all">Tất cả</button>
+              <button class="chip" data-filter="known">Đã biết</button>
+              <button class="chip" data-filter="review">Kiểm tra lại</button>
+              <button class="chip" data-filter="unsure">Chưa nhớ</button>
+            </div>
           </div>
-          <div class="weekday-row">
-            <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
+          <div class="vocab-toolbar-row2">
+            <select class="group-select" id="vocabGroupFilter">
+              <option value="">Tất cả chủ đề</option>
+            </select>
           </div>
-          <div class="calendar-grid" id="calendarGrid"></div>
-          <div class="legend">
-            <span class="legend-item"><i class="dot complete"></i> Hoàn thành</span>
-            <span class="legend-item"><i class="dot incomplete"></i> Chưa xong</span>
-            <span class="legend-item"><i class="dot today"></i> Hôm nay</span>
-            <span class="legend-item"><i class="dot diff-easy"></i> Dễ</span>
-            <span class="legend-item"><i class="dot diff-medium"></i> T.bình</span>
-            <span class="legend-item"><i class="dot diff-hard"></i> Khó</span>
+          <div class="vocab-actions">
+            <button class="btn btn-secondary" id="addWordBtn">+ Thêm từ</button>
+            <button class="btn btn-primary" id="testModeBtn">
+              🔁 Kiểm tra <span class="badge-count" id="unsureCount">0</span>
+            </button>
+          </div>
+
+          <div class="vocab-stats" id="vocabStats"></div>
+
+          <div class="word-list" id="wordList"></div>
+          <div class="empty-state" id="wordEmpty" style="display: none">
+            <p>
+              Chưa có từ nào. Bấm "+ Thêm từ" để bắt đầu xây kho từ vựng của
+              bạn.
+            </p>
           </div>
         </section>
-      </section>
 
-      <section class="tab-panel" id="tab-vocab">
-        <div class="vocab-toolbar">
-          <div class="vocab-search">
-            <span class="search-icon">⌕</span>
-            <input type="text" id="vocabSearch" placeholder="Tìm từ, nghĩa hoặc chủ đề...">
+        <section class="tab-panel" id="tab-checklist">
+          <div class="checklist-toolbar">
+            <button class="btn btn-secondary" id="newChecklistBtn">
+              + Tạo checklist
+            </button>
+            <button class="btn btn-ghost" id="importChecklistBtn">
+              ⬆ Nhập JSON
+            </button>
           </div>
-          <div class="vocab-filters" id="vocabFilters">
-            <button class="chip active" data-filter="all">Tất cả</button>
-            <button class="chip" data-filter="known">Đã biết</button>
-            <button class="chip" data-filter="unsure">Chưa chắc</button>
+          <div class="checklist-grid" id="checklistGrid"></div>
+          <div class="empty-state" id="checklistEmpty" style="display: none">
+            <p>
+              Chưa có checklist nào. Bấm "+ Tạo checklist" để tạo thủ công, hoặc
+              "⬆ Nhập JSON" để import.
+            </p>
           </div>
-        </div>
-        <div class="vocab-toolbar-row2">
-          <select class="group-select" id="vocabGroupFilter">
-            <option value="">Tất cả chủ đề</option>
-          </select>
-        </div>
-        <div class="vocab-actions">
-          <button class="btn btn-secondary" id="addWordBtn">+ Thêm từ</button>
-          <button class="btn btn-primary" id="testModeBtn">🔁 Kiểm tra <span class="badge-count"
-              id="unsureCount">0</span></button>
-        </div>
-
-        <div class="vocab-stats" id="vocabStats"></div>
-
-        <div class="word-list" id="wordList"></div>
-        <div class="empty-state" id="wordEmpty" style="display:none;">
-          <p>Chưa có từ nào. Bấm "+ Thêm từ" để bắt đầu xây kho từ vựng của bạn.</p>
-        </div>
-      </section>
-
-      <section class="tab-panel" id="tab-checklist">
-        <div class="checklist-toolbar">
-          <button class="btn btn-secondary" id="newChecklistBtn">+ Tạo checklist</button>
-          <button class="btn btn-ghost" id="importChecklistBtn">⬆ Nhập JSON</button>
-        </div>
-        <div class="checklist-grid" id="checklistGrid"></div>
-        <div class="empty-state" id="checklistEmpty" style="display:none;">
-          <p>Chưa có checklist nào. Bấm "+ Tạo checklist" để tạo thủ công, hoặc "⬆ Nhập JSON" để import.</p>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- Side panel for a day -->
-  <div class="overlay" id="overlay"></div>
-  <aside class="day-panel" id="dayPanel">
-    <div class="panel-header">
-      <div>
-        <div class="panel-date" id="panelDate">—</div>
-        <div class="panel-sub" id="panelSub"></div>
-      </div>
-      <button class="icon-btn" id="closePanel">✕</button>
+        </section>
+      </main>
     </div>
 
-    <!-- Nội dung bên dưới (bài mới / ôn lại / random) được sinh động bằng JS,
+    <!-- Side panel for a day -->
+    <div class="overlay" id="overlay"></div>
+    <aside class="day-panel" id="dayPanel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-date" id="panelDate">—</div>
+          <div class="panel-sub" id="panelSub"></div>
+        </div>
+        <button class="icon-btn" id="closePanel">✕</button>
+      </div>
+
+      <!-- Nội dung bên dưới (bài mới / ôn lại / random) được sinh động bằng JS,
          vì số lượng thẻ phụ thuộc vào Cài đặt và có thể thay đổi theo từng ngày. -->
-    <div class="panel-body" id="panelBody"></div>
-  </aside>
+      <div class="panel-body" id="panelBody"></div>
+    </aside>
 
-  <!-- Settings modal -->
-  <div class="overlay" id="settingsOverlay"></div>
-  <div class="modal modal-wide" id="settingsModal">
-    <h2>Cài đặt</h2>
+    <!-- Settings modal -->
+    <div class="overlay" id="settingsOverlay"></div>
+    <div class="modal modal-wide" id="settingsModal">
+      <h2>Cài đặt</h2>
 
-    <label>Số bài mới mỗi ngày</label>
-    <input type="number" id="newCountInput" min="0" value="1">
+      <label>Số bài mới mỗi ngày</label>
+      <input type="number" id="newCountInput" min="0" value="1" />
 
-    <span class="field-label-inline">Các vòng ôn tập (mỗi vòng ôn lại bài đã tạo N ngày trước)</span>
-    <div class="review-intervals-list" id="reviewIntervalsList"></div>
-    <button type="button" class="btn btn-ghost btn-block" id="addReviewInterval">+ Thêm vòng ôn tập</button>
+      <span class="field-label-inline"
+        >Các vòng ôn tập (mỗi vòng ôn lại bài đã tạo N ngày trước)</span
+      >
+      <div class="review-intervals-list" id="reviewIntervalsList"></div>
+      <button
+        type="button"
+        class="btn btn-ghost btn-block"
+        id="addReviewInterval"
+      >
+        + Thêm vòng ôn tập
+      </button>
 
-    <span class="field-label-inline">Số bài ngẫu nhiên mỗi ngày</span>
-    <input type="number" id="randomCountInput" min="0" value="1">
+      <span class="field-label-inline">Số bài ngẫu nhiên mỗi ngày</span>
+      <input type="number" id="randomCountInput" min="0" value="1" />
 
-    <div class="task-actions">
-      <button class="btn btn-secondary" id="settingsCancel">Đóng</button>
-      <button class="btn btn-primary" id="settingsSave">Lưu</button>
+      <div class="task-actions">
+        <button class="btn btn-secondary" id="settingsCancel">Đóng</button>
+        <button class="btn btn-primary" id="settingsSave">Lưu</button>
+      </div>
+      <p class="import-help">
+        Thay đổi ở đây chỉ áp dụng cho những ngày chưa từng mở trước đó — các
+        ngày đã có dữ liệu sẽ giữ nguyên số lượng cũ.
+      </p>
     </div>
-    <p class="import-help">Thay đổi ở đây chỉ áp dụng cho những ngày chưa từng mở trước đó — các ngày đã có dữ liệu sẽ
-      giữ nguyên số lượng cũ.</p>
-  </div>
 
-  <!-- Add/Edit word modal -->
-  <div class="overlay" id="wordOverlay"></div>
-  <div class="modal modal-wide" id="wordModal">
-    <h2 id="wordModalTitle">Thêm từ mới</h2>
-    <label>Từ / cụm từ</label>
-    <input type="text" id="wordTermInput" placeholder="VD: run">
-    <span class="field-label-inline">Phiên âm (tuỳ chọn)</span>
-    <input type="text" id="wordPronInput" placeholder="VD: /rʌn/">
-    <span class="field-label-inline">Chủ đề (tuỳ chọn)</span>
-    <select class="group-select" id="wordGroupInput">
-      <option value="">Không thuộc chủ đề nào</option>
-    </select>
-    <label>Nghĩa</label>
-    <div class="meanings-list" id="meaningsList"></div>
-    <button type="button" class="btn btn-ghost btn-block" id="addMeaningRow">+ Thêm nghĩa khác</button>
-    <div class="task-actions">
-      <button class="btn btn-secondary" id="wordCancel">Hủy</button>
-      <button class="btn btn-primary" id="wordSave">Lưu</button>
+    <!-- Add/Edit word modal -->
+    <div class="overlay" id="wordOverlay"></div>
+    <div class="modal modal-wide" id="wordModal">
+      <h2 id="wordModalTitle">Thêm từ mới</h2>
+      <label>Từ / cụm từ</label>
+      <input type="text" id="wordTermInput" placeholder="VD: run" />
+      <span class="field-label-inline">Phiên âm (tuỳ chọn)</span>
+      <input type="text" id="wordPronInput" placeholder="VD: /rʌn/" />
+      <span class="field-label-inline">Chủ đề (tuỳ chọn)</span>
+      <select class="group-select" id="wordGroupInput">
+        <option value="">Không thuộc chủ đề nào</option>
+      </select>
+      <label>Nghĩa</label>
+      <div class="meanings-list" id="meaningsList"></div>
+      <button type="button" class="btn btn-ghost btn-block" id="addMeaningRow">
+        + Thêm nghĩa khác
+      </button>
+      <div class="task-actions">
+        <button class="btn btn-secondary" id="wordCancel">Hủy</button>
+        <button class="btn btn-primary" id="wordSave">Lưu</button>
+      </div>
+      <button
+        type="button"
+        class="delete-link"
+        id="wordDelete"
+        style="display: none"
+      >
+        Xóa từ này
+      </button>
     </div>
-    <button type="button" class="delete-link" id="wordDelete" style="display:none;">Xóa từ này</button>
-  </div>
 
-  <!-- Test / flashcard modal -->
-  <div class="overlay" id="testOverlay"></div>
-  <div class="test-stage" id="testStage">
-    <div class="test-header">
-      <div class="test-progress" id="testProgress">1 / 1</div>
-      <button class="icon-btn" id="testClose">✕</button>
+    <!-- Test setup modal: choose which pools (chưa nhớ / kiểm tra lại / đã biết) to include -->
+    <div class="overlay" id="testSetupOverlay"></div>
+    <div class="modal" id="testSetupModal">
+      <h2>Chọn từ để kiểm tra</h2>
+      <div class="test-setup-options">
+        <label class="test-setup-option">
+          <input type="checkbox" id="testSetupUnsure" />
+          <span
+            >Chưa nhớ
+            <span class="badge-count" id="testSetupUnsureCount">0</span></span
+          >
+        </label>
+        <label class="test-setup-option">
+          <input type="checkbox" id="testSetupReview" />
+          <span
+            >Kiểm tra lại
+            <span class="badge-count" id="testSetupReviewCount">0</span></span
+          >
+        </label>
+        <label class="test-setup-option">
+          <input type="checkbox" id="testSetupKnown" />
+          <span
+            >Đã biết
+            <span class="badge-count" id="testSetupKnownCount">0</span></span
+          >
+        </label>
+      </div>
+      <p class="import-help" id="testSetupHint"></p>
+      <div class="task-actions">
+        <button class="btn btn-secondary" id="testSetupCancel">Hủy</button>
+        <button class="btn btn-primary" id="testSetupStart">Bắt đầu</button>
+      </div>
     </div>
-    <div class="test-body" id="testBody">
-      <div class="flashcard" id="flashcard">
-        <div class="flashcard-inner" id="flashcardInner">
-          <div class="flashcard-face flashcard-front">
-            <div class="fc-term" id="fcTerm">word</div>
-            <div class="fc-hint">Bấm để xem nghĩa</div>
-          </div>
-          <div class="flashcard-face flashcard-back">
-            <div class="fc-term-small" id="fcTermSmall">word</div>
-            <div class="fc-meanings" id="fcMeanings"></div>
+
+    <!-- Test / flashcard modal -->
+    <div class="overlay" id="testOverlay"></div>
+    <div class="test-stage" id="testStage">
+      <div class="test-header">
+        <div class="test-progress" id="testProgress">1 / 1</div>
+        <button class="icon-btn" id="testClose">✕</button>
+      </div>
+      <div class="test-body" id="testBody">
+        <div class="flashcard" id="flashcard">
+          <div class="flashcard-inner" id="flashcardInner">
+            <div class="flashcard-face flashcard-front">
+              <div class="fc-term" id="fcTerm">word</div>
+              <div class="fc-hint">Bấm để xem nghĩa</div>
+            </div>
+            <div class="flashcard-face flashcard-back">
+              <div class="fc-term-small" id="fcTermSmall">word</div>
+              <div class="fc-meanings" id="fcMeanings"></div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <div class="test-actions" id="testActions">
-      <button class="btn btn-danger" id="testStillUnsure">Chưa nhớ</button>
-      <button class="btn btn-success" id="testKnown">Đã nhớ</button>
-    </div>
-    <div class="test-done" id="testDone" style="display:none;">
-      <div class="test-done-title">Hoàn thành! 🎉</div>
-      <p id="testDoneSummary"></p>
-      <button class="btn btn-primary btn-block" id="testDoneClose">Đóng</button>
-    </div>
-  </div>
-
-  <!-- New checklist modal -->
-  <div class="overlay" id="checklistOverlay"></div>
-  <div class="modal" id="checklistModal">
-    <h2>Tạo checklist mới</h2>
-    <label>Tên checklist</label>
-    <input type="text" id="newChecklistName" placeholder="VD: Chuẩn bị phỏng vấn">
-    <div class="task-actions">
-      <button class="btn btn-secondary" id="checklistCancel">Hủy</button>
-      <button class="btn btn-primary" id="checklistCreate">Tạo</button>
-    </div>
-  </div>
-
-  <!-- Import JSON modal -->
-  <div class="overlay" id="importOverlay"></div>
-  <div class="modal modal-wide" id="importModal">
-    <h2>Nhập checklist từ JSON</h2>
-    <p class="import-help">
-      Dán JSON dạng <code>{ "name": "...", "items": [{ "text": "...", "checked": false }] }</code>
-      hoặc chọn file <code>.json</code> bên dưới. Có thể nhập nhiều checklist cùng lúc bằng
-      <code>{ "checklists": [ {...}, {...} ] }</code>.
-    </p>
-    <div class="import-file-row">
-      <input type="file" id="importFileInput" accept="application/json,.json">
-      <button type="button" class="btn btn-ghost" id="useSampleBtn" onclick="useSampleJson()">Dùng JSON mẫu</button>
-    </div>
-    <textarea class="import-textarea" id="importTextarea"
-      placeholder='{"name":"Tên checklist","items":[{"text":"Mục 1","checked":false}]}'></textarea>
-    <div class="import-error" id="importError"></div>
-    <div class="task-actions">
-      <button class="btn btn-secondary" id="importCancel">Hủy</button>
-      <button class="btn btn-primary" id="importSubmit">Nhập</button>
-    </div>
-  </div>
-
-  <!-- Checklist detail panel -->
-  <div class="overlay" id="checklistPanelOverlay"></div>
-  <aside class="day-panel" id="checklistPanel">
-    <div class="panel-header">
-      <div>
-        <div class="panel-date" id="checklistPanelName">—</div>
-        <div class="panel-sub" id="checklistPanelMeta"></div>
+      <div class="test-actions" id="testActions">
+        <button class="btn btn-danger" id="testStillUnsure">Chưa nhớ</button>
+        <button class="btn btn-review" id="testReview">Kiểm tra lại</button>
+        <button class="btn btn-success" id="testKnown">Đã nhớ</button>
       </div>
-      <button class="icon-btn" id="closeChecklistPanel">✕</button>
-    </div>
-    <div class="panel-body">
-      <div class="checklist-items" id="checklistItems"></div>
-      <div class="checklist-add-item-row">
-        <input type="text" id="newItemInput" placeholder="Thêm mục mới...">
-        <button class="btn btn-secondary" id="addItemBtn">+ Thêm</button>
+      <div class="test-done" id="testDone" style="display: none">
+        <div class="test-done-title">Hoàn thành! 🎉</div>
+        <p id="testDoneSummary"></p>
+        <button class="btn btn-primary btn-block" id="testDoneClose">
+          Đóng
+        </button>
       </div>
-      <button type="button" class="delete-link" id="checklistDelete" style="margin-top:20px;">Xóa checklist này</button>
     </div>
-  </aside>
 
-  <script src="app.js"></script>
-</body>
+    <!-- New checklist modal -->
+    <div class="overlay" id="checklistOverlay"></div>
+    <div class="modal" id="checklistModal">
+      <h2>Tạo checklist mới</h2>
+      <label>Tên checklist</label>
+      <input
+        type="text"
+        id="newChecklistName"
+        placeholder="VD: Chuẩn bị phỏng vấn"
+      />
+      <div class="task-actions">
+        <button class="btn btn-secondary" id="checklistCancel">Hủy</button>
+        <button class="btn btn-primary" id="checklistCreate">Tạo</button>
+      </div>
+    </div>
 
+    <!-- Import JSON modal -->
+    <div class="overlay" id="importOverlay"></div>
+    <div class="modal modal-wide" id="importModal">
+      <h2>Nhập checklist từ JSON</h2>
+      <p class="import-help">
+        Dán JSON dạng
+        <code
+          >{ "name": "...", "items": [{ "text": "...", "checked": false }]
+          }</code
+        >
+        hoặc chọn file <code>.json</code> bên dưới. Có thể nhập nhiều checklist
+        cùng lúc bằng <code>{ "checklists": [ {...}, {...} ] }</code>.
+      </p>
+      <div class="import-file-row">
+        <input
+          type="file"
+          id="importFileInput"
+          accept="application/json,.json"
+        />
+        <button
+          type="button"
+          class="btn btn-ghost"
+          id="useSampleBtn"
+          onclick="useSampleJson()"
+        >
+          Dùng JSON mẫu
+        </button>
+      </div>
+      <textarea
+        class="import-textarea"
+        id="importTextarea"
+        placeholder='{"name":"Tên checklist","items":[{"text":"Mục 1","checked":false}]}'
+      ></textarea>
+      <div class="import-error" id="importError"></div>
+      <div class="task-actions">
+        <button class="btn btn-secondary" id="importCancel">Hủy</button>
+        <button class="btn btn-primary" id="importSubmit">Nhập</button>
+      </div>
+    </div>
+
+    <!-- Checklist detail panel -->
+    <div class="overlay" id="checklistPanelOverlay"></div>
+    <aside class="day-panel" id="checklistPanel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-date" id="checklistPanelName">—</div>
+          <div class="panel-sub" id="checklistPanelMeta"></div>
+        </div>
+        <button class="icon-btn" id="closeChecklistPanel">✕</button>
+      </div>
+      <div class="panel-body">
+        <div class="checklist-items" id="checklistItems"></div>
+        <div class="checklist-add-item-row">
+          <input type="text" id="newItemInput" placeholder="Thêm mục mới..." />
+          <button class="btn btn-secondary" id="addItemBtn">+ Thêm</button>
+        </div>
+        <button
+          type="button"
+          class="delete-link"
+          id="checklistDelete"
+          style="margin-top: 20px"
+        >
+          Xóa checklist này
+        </button>
+      </div>
+    </aside>
+
+    <script src="app.js"></script>
+  </body>
 </html>
