@@ -427,6 +427,9 @@
             <button class="btn btn-primary" id="testModeBtn">
               🔁 Kiểm tra <span class="badge-count" id="unsureCount">0</span>
             </button>
+            <button class="btn btn-secondary" id="quizModeBtn">
+              🧠 Test trắc nghiệm
+            </button>
           </div>
 
           <div class="vocab-stats" id="vocabStats"></div>
@@ -604,6 +607,64 @@
         <div class="test-done-title">Hoàn thành! 🎉</div>
         <p id="testDoneSummary"></p>
         <button class="btn btn-primary btn-block" id="testDoneClose">
+          Đóng
+        </button>
+      </div>
+    </div>
+
+    <!-- Quiz setup modal: choose ONE status set + how many words -->
+    <div class="overlay" id="quizSetupOverlay"></div>
+    <div class="modal" id="quizSetupModal">
+      <h2>Test trắc nghiệm</h2>
+      <span class="field-label-inline">Chọn 1 nhóm từ để test</span>
+      <div class="test-setup-options" id="quizSetupRadios">
+        <label class="test-setup-option">
+          <input type="radio" name="quizSetupStatus" value="unsure" checked />
+          <span
+            >Chưa nhớ
+            <span class="badge-count" id="quizSetupUnsureCount">0</span></span
+          >
+        </label>
+        <label class="test-setup-option">
+          <input type="radio" name="quizSetupStatus" value="review" />
+          <span
+            >Kiểm tra lại
+            <span class="badge-count" id="quizSetupReviewCount">0</span></span
+          >
+        </label>
+        <label class="test-setup-option">
+          <input type="radio" name="quizSetupStatus" value="known" />
+          <span
+            >Đã biết
+            <span class="badge-count" id="quizSetupKnownCount">0</span></span
+          >
+        </label>
+      </div>
+      <span class="field-label-inline">Số lượng từ muốn test</span>
+      <input type="number" id="quizSetupCount" min="1" value="10" />
+      <p class="import-help" id="quizSetupHint"></p>
+      <div class="task-actions">
+        <button class="btn btn-secondary" id="quizSetupCancel">Hủy</button>
+        <button class="btn btn-primary" id="quizSetupStart">Bắt đầu</button>
+      </div>
+    </div>
+
+    <!-- Quiz stage: multiple choice (từ tiếng Anh -> chọn đúng nghĩa tiếng Việt) -->
+    <div class="overlay" id="quizOverlay"></div>
+    <div class="test-stage" id="quizStage">
+      <div class="test-header">
+        <div class="test-progress" id="quizProgress">1 / 1</div>
+        <button class="icon-btn" id="quizClose">✕</button>
+      </div>
+      <div class="quiz-body" id="quizBody">
+        <div class="quiz-term" id="quizTerm">word</div>
+        <div class="quiz-term-pron" id="quizTermPron"></div>
+        <div class="quiz-options" id="quizOptions"></div>
+      </div>
+      <div class="test-done" id="quizDone" style="display: none">
+        <div class="test-done-title">Hoàn thành! 🎉</div>
+        <p id="quizDoneSummary"></p>
+        <button class="btn btn-primary btn-block" id="quizDoneClose">
           Đóng
         </button>
       </div>

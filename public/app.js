@@ -697,6 +697,29 @@ function initVocab() {
     .getElementById("testSetupStart")
     .addEventListener("click", startTestFromSetup);
 
+  document
+    .getElementById("quizModeBtn")
+    .addEventListener("click", openQuizSetup);
+  document
+    .getElementById("quizSetupCancel")
+    .addEventListener("click", closeQuizSetup);
+  document
+    .getElementById("quizSetupOverlay")
+    .addEventListener("click", closeQuizSetup);
+  document
+    .getElementById("quizSetupStart")
+    .addEventListener("click", startQuizFromSetup);
+  document
+    .querySelectorAll('input[name="quizSetupStatus"]')
+    .forEach((r) => r.addEventListener("change", updateQuizSetupHint));
+  document.getElementById("quizClose").addEventListener("click", closeQuizMode);
+  document
+    .getElementById("quizOverlay")
+    .addEventListener("click", closeQuizMode);
+  document
+    .getElementById("quizDoneClose")
+    .addEventListener("click", closeQuizMode);
+
   document.getElementById("testClose").addEventListener("click", closeTestMode);
   document
     .getElementById("testOverlay")
@@ -1163,6 +1186,184 @@ function closeTestMode() {
   document.getElementById("testOverlay").classList.remove("show");
   document.getElementById("testStage").classList.remove("show");
   loadWords();
+}
+
+// ---------- Quiz mode (trắc nghiệm 4 đáp án) ----------
+// Khác với "Kiểm tra" (flashcard) ở trên: chế độ này KHÔNG bao giờ đổi
+// trạng thái known/review/unsure của từ. Nó chỉ là một vòng luyện tập:
+// - Chọn 1 trong 3 nhóm (chưa nhớ / kiểm tra lại / đã biết) + số lượng từ.
+// - Mỗi từ hiện ra kèm 4 đáp án tiếng Việt (1 đúng, 3 lấy random từ các từ khác).
+// - Trả lời đúng -> từ bị loại khỏi hàng đợi (không đổi trạng thái).
+// - Trả lời sai -> từ được chèn lại vào hàng đợi ở một vị trí ngẫu nhiên để hỏi lại.
+const quizState = { queue: [], total: 0, mistakes: 0 };
+
+function openQuizSetup() {
+  document.getElementById("quizSetupUnsureCount").textContent = poolFor([
+    "unsure",
+  ]).length;
+  document.getElementById("quizSetupReviewCount").textContent = poolFor([
+    "review",
+  ]).length;
+  document.getElementById("quizSetupKnownCount").textContent = poolFor([
+    "known",
+  ]).length;
+
+  document.querySelector(
+    'input[name="quizSetupStatus"][value="unsure"]',
+  ).checked = true;
+  updateQuizSetupHint();
+
+  document.getElementById("quizSetupOverlay").classList.add("show");
+  document.getElementById("quizSetupModal").classList.add("show");
+}
+
+function closeQuizSetup() {
+  document.getElementById("quizSetupOverlay").classList.remove("show");
+  document.getElementById("quizSetupModal").classList.remove("show");
+}
+
+function updateQuizSetupHint() {
+  const checked = document.querySelector(
+    'input[name="quizSetupStatus"]:checked',
+  );
+  const status = checked ? checked.value : "unsure";
+  const available = poolFor([status]).length;
+
+  const countInput = document.getElementById("quizSetupCount");
+  countInput.max = available > 0 ? available : 1;
+  countInput.value = Math.max(1, Math.min(10, available || 1));
+
+  let hint =
+    available > 0
+      ? `Nhóm "${statusLabel[status]}" hiện có ${available} từ.`
+      : `Nhóm "${statusLabel[status]}" chưa có từ nào.`;
+  if (vocab.groupFilter) {
+    hint += ` (chỉ tính trong chủ đề đang lọc: ${groupLabel(vocab.groupFilter)})`;
+  }
+  document.getElementById("quizSetupHint").textContent = hint;
+}
+
+function startQuizFromSetup() {
+  const checked = document.querySelector(
+    'input[name="quizSetupStatus"]:checked',
+  );
+  const status = checked ? checked.value : "unsure";
+  const pool = poolFor([status]);
+
+  if (pool.length === 0) {
+    alert(`Nhóm "${statusLabel[status]}" chưa có từ nào để test.`);
+    return;
+  }
+
+  let count = parseInt(document.getElementById("quizSetupCount").value, 10);
+  if (isNaN(count) || count < 1) count = 1;
+  if (count > pool.length) count = pool.length;
+
+  closeQuizSetup();
+  openQuizMode(shuffle(pool).slice(0, count));
+}
+
+function openQuizMode(words) {
+  quizState.queue = [...words];
+  quizState.total = quizState.queue.length;
+  quizState.mistakes = 0;
+
+  document.getElementById("quizOverlay").classList.add("show");
+  document.getElementById("quizStage").classList.add("show");
+  document.getElementById("quizDone").style.display = "none";
+  document.getElementById("quizBody").style.display = "flex";
+
+  buildQuizQuestion();
+}
+
+function closeQuizMode() {
+  document.getElementById("quizOverlay").classList.remove("show");
+  document.getElementById("quizStage").classList.remove("show");
+}
+
+function buildQuizQuestion() {
+  const w = quizState.queue[0];
+  const correctDef =
+    (w.meanings[0] && w.meanings[0].definition) || "(không có nghĩa)";
+
+  // 3 đáp án nhiễu: lấy random từ nghĩa của các từ KHÁC trong toàn bộ kho từ vựng
+  const otherWords = vocab.words.filter(
+    (x) => x.id !== w.id && x.meanings[0] && x.meanings[0].definition,
+  );
+  const distractors = shuffle(otherWords).slice(0, 3);
+
+  const options = shuffle([
+    { text: correctDef, correct: true },
+    ...distractors.map((o) => ({
+      text: o.meanings[0].definition,
+      correct: false,
+    })),
+  ]);
+
+  renderQuizQuestion(w, options);
+}
+
+function renderQuizQuestion(w, options) {
+  document.getElementById("quizProgress").textContent =
+    `${quizState.total - quizState.queue.length + 1} / ${quizState.total}`;
+  document.getElementById("quizTerm").textContent = w.term;
+  document.getElementById("quizTermPron").textContent = w.pronunciation || "";
+
+  const optWrap = document.getElementById("quizOptions");
+  optWrap.innerHTML = "";
+  options.forEach((opt) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "quiz-option-btn";
+    btn.textContent = opt.text;
+    btn.dataset.correct = opt.correct ? "1" : "0";
+    btn.addEventListener("click", () =>
+      handleQuizAnswer(opt.correct, btn, optWrap),
+    );
+    optWrap.appendChild(btn);
+  });
+}
+
+function handleQuizAnswer(isCorrect, clickedBtn, optWrap) {
+  const buttons = [...optWrap.querySelectorAll(".quiz-option-btn")];
+  buttons.forEach((b) => {
+    b.disabled = true;
+    if (b.dataset.correct === "1") b.classList.add("correct");
+  });
+  if (!isCorrect) clickedBtn.classList.add("wrong");
+
+  setTimeout(() => {
+    // Luôn bỏ từ hiện tại ra khỏi đầu hàng đợi trước.
+    const current = quizState.queue.shift();
+
+    if (isCorrect) {
+      // Đúng -> loại hẳn khỏi hàng đợi lần test này. KHÔNG đổi trạng thái từ.
+    } else {
+      // Sai -> chèn lại vào một vị trí ngẫu nhiên trong phần còn lại của hàng đợi.
+      quizState.mistakes++;
+      const insertPos = Math.floor(
+        Math.random() * (quizState.queue.length + 1),
+      );
+      quizState.queue.splice(insertPos, 0, current);
+    }
+
+    if (quizState.queue.length === 0) {
+      showQuizDone();
+    } else {
+      buildQuizQuestion();
+    }
+  }, 650);
+}
+
+function showQuizDone() {
+  document.getElementById("quizBody").style.display = "none";
+  document.getElementById("quizDone").style.display = "block";
+  document.getElementById("quizProgress").textContent =
+    `${quizState.total} / ${quizState.total}`;
+  document.getElementById("quizDoneSummary").textContent =
+    quizState.mistakes === 0
+      ? `Xuất sắc! Bạn trả lời đúng cả ${quizState.total} từ ngay từ lần đầu tiên.`
+      : `Đã hoàn thành ${quizState.total} từ, với ${quizState.mistakes} lượt trả lời sai (các từ trả lời sai đã được hỏi lại cho tới khi đúng).`;
 }
 
 // ===================== Checklist =====================

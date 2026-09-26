@@ -1089,7 +1089,8 @@ body {
   font-size: 13px;
   cursor: pointer;
 }
-.test-setup-option input[type="checkbox"] {
+.test-setup-option input[type="checkbox"],
+.test-setup-option input[type="radio"] {
   width: 17px;
   height: 17px;
   accent-color: var(--accent);
@@ -1115,4 +1116,66 @@ body {
   color: var(--text-muted);
   font-size: 13px;
   margin-bottom: 16px;
+}
+
+/* ===================== Quiz (multiple choice) ===================== */
+
+.quiz-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quiz-term {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.quiz-term-pron {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: -10px;
+  min-height: 1em;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quiz-option-btn {
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--panel-elevated);
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.quiz-option-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.quiz-option-btn:disabled {
+  cursor: default;
+}
+.quiz-option-btn.correct {
+  border-color: var(--known);
+  background: #34d39922;
+  color: var(--known);
+}
+.quiz-option-btn.wrong {
+  border-color: var(--hard);
+  background: #f8717122;
+  color: var(--hard);
 }
