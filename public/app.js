@@ -1069,10 +1069,25 @@ function openTestSetup() {
     ? `Chỉ tính từ trong chủ đề đang lọc: ${groupLabel(vocab.groupFilter)}`
     : "Tính trên toàn bộ kho từ vựng (không lọc theo chủ đề).";
 
-  // mặc định chọn sẵn "Chưa nhớ" + "Kiểm tra lại", bỏ "Đã biết"
-  document.getElementById("testSetupUnsure").checked = true;
-  document.getElementById("testSetupReview").checked = true;
-  document.getElementById("testSetupKnown").checked = false;
+  // Mặc định khớp với chip lọc (Tất cả / Đã biết / Kiểm tra lại / Chưa nhớ) đang chọn
+  // ở danh sách từ vựng. Nếu đang ở "Tất cả" thì giữ mặc định cũ: Chưa nhớ + Kiểm tra lại.
+  if (vocab.filter === "known") {
+    document.getElementById("testSetupUnsure").checked = false;
+    document.getElementById("testSetupReview").checked = false;
+    document.getElementById("testSetupKnown").checked = true;
+  } else if (vocab.filter === "review") {
+    document.getElementById("testSetupUnsure").checked = false;
+    document.getElementById("testSetupReview").checked = true;
+    document.getElementById("testSetupKnown").checked = false;
+  } else if (vocab.filter === "unsure") {
+    document.getElementById("testSetupUnsure").checked = true;
+    document.getElementById("testSetupReview").checked = false;
+    document.getElementById("testSetupKnown").checked = false;
+  } else {
+    document.getElementById("testSetupUnsure").checked = true;
+    document.getElementById("testSetupReview").checked = true;
+    document.getElementById("testSetupKnown").checked = false;
+  }
 
   document.getElementById("testSetupOverlay").classList.add("show");
   document.getElementById("testSetupModal").classList.add("show");
@@ -1223,8 +1238,13 @@ function openQuizSetup() {
     "known",
   ]).length;
 
+  // Mặc định khớp với chip lọc đang chọn ở danh sách từ vựng; nếu đang ở "Tất cả"
+  // (hoặc chip không tương ứng 1 trạng thái cụ thể) thì mặc định "Chưa nhớ" như cũ.
+  const defaultQuizStatus = ["unsure", "review", "known"].includes(vocab.filter)
+    ? vocab.filter
+    : "unsure";
   document.querySelector(
-    'input[name="quizSetupStatus"][value="unsure"]',
+    `input[name="quizSetupStatus"][value="${defaultQuizStatus}"]`,
   ).checked = true;
   updateQuizSetupHint();
 
