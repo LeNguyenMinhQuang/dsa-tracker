@@ -719,6 +719,16 @@ function initVocab() {
   document
     .getElementById("quizDoneClose")
     .addEventListener("click", closeQuizMode);
+  document.querySelectorAll(".quiz-status-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      document
+        .querySelectorAll(".quiz-status-btn")
+        .forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      quizState.selectedStatusChange = btn.dataset.status; // "", "unsure" hoặc "known"
+    });
+  });
 
   document.getElementById("testClose").addEventListener("click", closeTestMode);
   document
@@ -1195,7 +1205,12 @@ function closeTestMode() {
 // - Mỗi từ hiện ra kèm 4 đáp án tiếng Việt (1 đúng, 3 lấy random từ các từ khác).
 // - Trả lời đúng -> từ bị loại khỏi hàng đợi (không đổi trạng thái).
 // - Trả lời sai -> từ được chèn lại vào hàng đợi ở một vị trí ngẫu nhiên để hỏi lại.
-const quizState = { queue: [], total: 0, mistakes: 0 };
+const quizState = {
+  queue: [],
+  total: 0,
+  mistakes: 0,
+  selectedStatusChange: "",
+};
 
 function openQuizSetup() {
   document.getElementById("quizSetupUnsureCount").textContent = poolFor([
@@ -1281,7 +1296,16 @@ function closeQuizMode() {
   document.getElementById("quizStage").classList.remove("show");
 }
 
+function resetQuizStatusSeg() {
+  quizState.selectedStatusChange = "";
+  document.querySelectorAll(".quiz-status-btn").forEach((b) => {
+    b.disabled = false;
+    b.classList.toggle("active", b.dataset.status === "");
+  });
+}
+
 function buildQuizQuestion() {
+  resetQuizStatusSeg();
   const w = quizState.queue[0];
   const correctDef =
     (w.meanings[0] && w.meanings[0].definition) || "(không có nghĩa)";
@@ -1324,6 +1348,21 @@ function renderQuizQuestion(w, options) {
   });
 }
 
+async function applyQuizStatusChange(word, status) {
+  try {
+    const res = await fetch(`/api/words/${word.id}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    // cập nhật cache cục bộ ngay để các câu hỏi/tiến trình tiếp theo phản ánh
+    // đúng trạng thái mới, mà không cần load lại toàn bộ danh sách từ vựng.
+    if (res.ok) word.status = status;
+  } catch (e) {
+    // bỏ qua lỗi mạng nhỏ, không chặn luồng quiz
+  }
+}
+
 function handleQuizAnswer(isCorrect, clickedBtn, optWrap) {
   const buttons = [...optWrap.querySelectorAll(".quiz-option-btn")];
   buttons.forEach((b) => {
@@ -1332,14 +1371,24 @@ function handleQuizAnswer(isCorrect, clickedBtn, optWrap) {
   });
   if (!isCorrect) clickedBtn.classList.add("wrong");
 
+  // Khóa 3 nút X/O/V lại — lựa chọn đã chốt tại thời điểm bấm đáp án.
+  document
+    .querySelectorAll(".quiz-status-btn")
+    .forEach((b) => (b.disabled = true));
+  const chosenStatus = quizState.selectedStatusChange; // "", "unsure" hoặc "known"
+
   setTimeout(() => {
     // Luôn bỏ từ hiện tại ra khỏi đầu hàng đợi trước.
     const current = quizState.queue.shift();
 
     if (isCorrect) {
-      // Đúng -> loại hẳn khỏi hàng đợi lần test này. KHÔNG đổi trạng thái từ.
+      // Đúng -> loại hẳn khỏi hàng đợi lần test này.
+      // Chỉ đổi trạng thái nếu người dùng chủ động chọn X (chưa nhớ) hoặc V (đã biết);
+      // nếu chọn O (giữ nguyên, mặc định) thì không gọi API, giữ nguyên trạng thái cũ.
+      if (chosenStatus) applyQuizStatusChange(current, chosenStatus);
     } else {
-      // Sai -> chèn lại vào một vị trí ngẫu nhiên trong phần còn lại của hàng đợi.
+      // Sai -> KHÔNG đổi trạng thái, dù đã chọn X/O/V nào. Chèn lại vào một vị trí
+      // ngẫu nhiên trong phần còn lại của hàng đợi để hỏi lại.
       quizState.mistakes++;
       const insertPos = Math.floor(
         Math.random() * (quizState.queue.length + 1),

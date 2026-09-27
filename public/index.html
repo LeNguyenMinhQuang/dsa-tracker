@@ -659,6 +659,35 @@
       <div class="quiz-body" id="quizBody">
         <div class="quiz-term" id="quizTerm">word</div>
         <div class="quiz-term-pron" id="quizTermPron"></div>
+        <div class="quiz-status-hint">
+          Nếu trả lời đúng, chuyển từ này thành:
+        </div>
+        <div class="quiz-status-seg" id="quizStatusSeg">
+          <button
+            type="button"
+            class="quiz-status-btn quiz-status-unsure"
+            data-status="unsure"
+            title="Chưa nhớ"
+          >
+            X
+          </button>
+          <button
+            type="button"
+            class="quiz-status-btn quiz-status-keep active"
+            data-status=""
+            title="Giữ nguyên trạng thái hiện tại"
+          >
+            O
+          </button>
+          <button
+            type="button"
+            class="quiz-status-btn quiz-status-known"
+            data-status="known"
+            title="Đã biết"
+          >
+            V
+          </button>
+        </div>
         <div class="quiz-options" id="quizOptions"></div>
       </div>
       <div class="test-done" id="quizDone" style="display: none">
