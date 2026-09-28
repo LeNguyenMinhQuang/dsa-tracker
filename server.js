@@ -5,7 +5,11 @@ const { Redis } = require("@upstash/redis");
 
 const HOST = "0.0.0.0";
 const PORT = process.env.PORT || 3131;
-const DATA_KEY = "dsa-tracker-data";
+const LEGACY_KEY = "dsa-tracker-data"; // key cũ (một cục dữ liệu chung): chỉ đọc khi chuyển đổi, không xoá
+const USERS_KEY = "dsa-tracker:users"; // [{ id, name, createdDate }]
+const GROUPS_KEY = "dsa-tracker:groups"; // nhóm chủ đề TOEIC, dùng chung cho mọi user
+const LEGACY_USER_ID = "default"; // id cố định của user nhận dữ liệu cũ (để chuyển đổi chạy lặp lại vẫn an toàn)
+const userKey = (id) => `dsa-tracker:user:${id}`;
 
 // Đọc UPSTASH_REDIS_REST_URL và UPSTASH_REDIS_REST_TOKEN từ biến môi trường
 const redis = Redis.fromEnv();
@@ -15,23 +19,51 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 // ---------- Data helpers ----------
-async function loadData() {
-  let data = await redis.get(DATA_KEY);
-  if (!data) {
-    const initial = {
-      settings: { newCount: 1, reviewIntervals: [3], randomCount: 1 },
-      problems: {},
-      days: {},
-      groups: {},
-      words: {},
-      checklists: {},
-    };
-    await redis.set(DATA_KEY, initial);
-    return initial;
+function newUserData() {
+  return {
+    settings: { newCount: 1, reviewIntervals: [3], randomCount: 1 },
+    problems: {},
+    days: {},
+    words: {},
+    checklists: {},
+  };
+}
+
+// Lần chạy đầu tiên (chưa có danh sách user): chuyển dữ liệu cũ sang user đầu tiên.
+// Key cũ được giữ nguyên làm bản sao lưu.
+async function migrate() {
+  const users = await redis.get(USERS_KEY);
+  if (users) return;
+
+  const legacy = await redis.get(LEGACY_KEY);
+  if (legacy) {
+    const { groups, ...rest } = legacy;
+    await redis.set(GROUPS_KEY, groups || {}, { nx: true });
+    await redis.set(userKey(LEGACY_USER_ID), rest);
+    await redis.set(USERS_KEY, [
+      { id: LEGACY_USER_ID, name: "Tôi", createdDate: todayStr() },
+    ]);
+  } else {
+    await redis.set(USERS_KEY, []);
   }
-  if (!data.words) data.words = {}; // migration cho data.json tạo trước khi có tính năng từ vựng
-  if (!data.groups) data.groups = {}; // migration cho data.json tạo trước khi có nhóm chủ đề TOEIC
-  if (!data.checklists) data.checklists = {}; // migration cho data.json tạo trước khi có tính năng checklist
+}
+
+let readyPromise = null;
+function ensureReady() {
+  if (!readyPromise) {
+    readyPromise = migrate().catch((err) => {
+      readyPromise = null; // cho phép thử lại ở request sau
+      throw err;
+    });
+  }
+  return readyPromise;
+}
+
+// Dữ liệu của user hiện tại đã được middleware đọc sẵn vào req.userData.
+async function loadData(req) {
+  const data = req.userData;
+  if (!data.words) data.words = {}; // migration cho dữ liệu tạo trước khi có tính năng từ vựng
+  if (!data.checklists) data.checklists = {}; // migration cho dữ liệu tạo trước khi có tính năng checklist
 
   // migration: cấu hình số lượng bài/ngày (trước đây chỉ có 1 bài mới / 1 ôn / 1 random cố định)
   if (!data.settings) data.settings = {};
@@ -54,8 +86,8 @@ async function loadData() {
   return data;
 }
 
-async function saveData(data) {
-  await redis.set(DATA_KEY, data);
+async function saveData(req, data) {
+  await redis.set(userKey(req.userId), data);
 }
 
 function todayStr() {
@@ -196,11 +228,63 @@ function dayStatus(data, date) {
   return newDone && reviewDone && randomDone ? "complete" : "incomplete";
 }
 
+// ---------- Users ----------
+const wrap = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
+
+// Mọi /api (trừ /users và /groups) cần header X-User-Id của một user đang tồn tại.
+// Không có mật khẩu: chỉ dùng để tách dữ liệu của từng người.
+app.use(
+  "/api",
+  wrap(async (req, res, next) => {
+    await ensureReady();
+    if (req.path === "/users" || req.path === "/groups") return next();
+
+    const id = req.get("X-User-Id");
+    const data = id ? await redis.get(userKey(id)) : null;
+    if (!data) return res.status(401).json({ error: "Chưa chọn người dùng" });
+
+    req.userId = id;
+    req.userData = data;
+    next();
+  }),
+);
+
+app.get(
+  "/api/users",
+  wrap(async (req, res) => {
+    res.json((await redis.get(USERS_KEY)) || []);
+  }),
+);
+
+app.post(
+  "/api/users",
+  wrap(async (req, res) => {
+    const name = String((req.body && req.body.name) || "")
+      .trim()
+      .slice(0, 30);
+    if (!name)
+      return res
+        .status(400)
+        .json({ error: "Tên người dùng không được để trống" });
+
+    const users = (await redis.get(USERS_KEY)) || [];
+    if (users.some((u) => u.name.toLowerCase() === name.toLowerCase()))
+      return res.status(400).json({ error: "Tên này đã tồn tại" });
+
+    const user = { id: crypto.randomUUID(), name, createdDate: todayStr() };
+    await redis.set(userKey(user.id), newUserData());
+    users.push(user);
+    await redis.set(USERS_KEY, users);
+    res.json(user);
+  }),
+);
+
 // ---------- Routes ----------
 
 // Month summary: array of { date, status, difficulty, starred }
 app.get("/api/month/:year/:month", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const year = parseInt(req.params.year, 10);
   const month = parseInt(req.params.month, 10); // 1-12
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -227,17 +311,17 @@ app.get("/api/month/:year/:month", async (req, res) => {
 
     result.push({ date, status, difficulty, starred });
   }
-  await saveData(data);
+  await saveData(req, data);
   res.json({ days: result, today: t });
 });
 
 // Day detail
 app.get("/api/day/:date", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { date } = req.params;
   const t = todayStr();
   if (date <= t) assignTasks(data, date);
-  await saveData(data);
+  await saveData(req, data);
 
   const day = ensureDay(data, date);
 
@@ -281,7 +365,7 @@ app.get("/api/day/:date", async (req, res) => {
 
 // Create / update a "new problem" slot for a date
 app.post("/api/day/:date/new/:index", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { date } = req.params;
   const index = parseInt(req.params.index, 10);
   const { name, difficulty, starred, note } = req.body;
@@ -313,13 +397,13 @@ app.post("/api/day/:date/new/:index", async (req, res) => {
     data.problems[id] = problem;
     day.newSlots[index] = { problemId: id };
   }
-  await saveData(data);
+  await saveData(req, data);
   res.json(problem);
 });
 
 // Toggle complete for a "new problem" slot
 app.post("/api/day/:date/new/:index/complete", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { date } = req.params;
   const index = parseInt(req.params.index, 10);
   const day = data.days[date];
@@ -331,13 +415,13 @@ app.post("/api/day/:date/new/:index/complete", async (req, res) => {
     req.body.completed !== undefined
       ? !!req.body.completed
       : !problem.completed;
-  await saveData(data);
+  await saveData(req, data);
   res.json(problem);
 });
 
 // Toggle review completion for a given review slot index
 app.post("/api/day/:date/review/:index/complete", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { date } = req.params;
   const index = parseInt(req.params.index, 10);
   const day = data.days[date];
@@ -346,13 +430,13 @@ app.post("/api/day/:date/review/:index/complete", async (req, res) => {
     return res.status(404).json({ error: "Không có bài ôn tập ở vị trí này" });
   slot.completed =
     req.body.completed !== undefined ? !!req.body.completed : !slot.completed;
-  await saveData(data);
+  await saveData(req, data);
   res.json({ completed: slot.completed });
 });
 
 // Toggle random completion for a given random slot index
 app.post("/api/day/:date/random/:index/complete", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { date } = req.params;
   const index = parseInt(req.params.index, 10);
   const day = data.days[date];
@@ -361,13 +445,13 @@ app.post("/api/day/:date/random/:index/complete", async (req, res) => {
     return res.status(404).json({ error: "Không có bài random ở vị trí này" });
   slot.completed =
     req.body.completed !== undefined ? !!req.body.completed : !slot.completed;
-  await saveData(data);
+  await saveData(req, data);
   res.json({ completed: slot.completed });
 });
 
 // Reroll a given random slot index
 app.post("/api/day/:date/random/:index/reroll", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { date } = req.params;
   const index = parseInt(req.params.index, 10);
   const day = ensureDay(data, date);
@@ -389,18 +473,18 @@ app.post("/api/day/:date/random/:index/reroll", async (req, res) => {
     return res.status(404).json({ error: "Không còn bài nào khác để đổi" });
   const pick = pool[Math.floor(Math.random() * pool.length)];
   day.randomSlots[index] = { problemId: pick.id, completed: false };
-  await saveData(data);
+  await saveData(req, data);
   res.json({ problem: pick, completed: false });
 });
 
 // Settings
 app.get("/api/settings", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   res.json(data.settings);
 });
 
 app.post("/api/settings", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { newCount, reviewIntervals, randomCount } = req.body;
 
   if (newCount !== undefined && parseInt(newCount, 10) >= 0) {
@@ -416,7 +500,7 @@ app.post("/api/settings", async (req, res) => {
     data.settings.randomCount = parseInt(randomCount, 10);
   }
 
-  await saveData(data);
+  await saveData(req, data);
   res.json(data.settings);
 });
 
@@ -435,17 +519,19 @@ function validMeanings(meanings) {
 }
 
 // List all topic groups (used to tag/filter vocabulary)
-app.get("/api/groups", async (req, res) => {
-  const data = await loadData();
-  const groups = Object.values(data.groups || {}).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
-  res.json(groups);
-});
+app.get(
+  "/api/groups",
+  wrap(async (req, res) => {
+    const groups = Object.values((await redis.get(GROUPS_KEY)) || {}).sort(
+      (a, b) => a.name.localeCompare(b.name),
+    );
+    res.json(groups);
+  }),
+);
 
 // List all words
 app.get("/api/words", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const words = Object.values(data.words).sort((a, b) =>
     a.term.localeCompare(b.term),
   );
@@ -454,7 +540,7 @@ app.get("/api/words", async (req, res) => {
 
 // Create a word
 app.post("/api/words", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { term, pronunciation, groupId, meanings } = req.body;
   if (!term || !term.trim())
     return res.status(400).json({ error: "Từ không được để trống" });
@@ -475,13 +561,13 @@ app.post("/api/words", async (req, res) => {
     reviewCount: 0,
   };
   data.words[id] = word;
-  await saveData(data);
+  await saveData(req, data);
   res.json(word);
 });
 
 // Update a word (term + pronunciation + group + meanings)
 app.put("/api/words/:id", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const word = data.words[req.params.id];
   if (!word) return res.status(404).json({ error: "Không tìm thấy từ" });
   const { term, pronunciation, groupId, meanings } = req.body;
@@ -491,23 +577,23 @@ app.put("/api/words/:id", async (req, res) => {
   if (groupId !== undefined) word.groupId = groupId || null;
   const cleaned = validMeanings(meanings);
   if (cleaned) word.meanings = cleaned;
-  await saveData(data);
+  await saveData(req, data);
   res.json(word);
 });
 
 // Delete a word
 app.delete("/api/words/:id", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   if (!data.words[req.params.id])
     return res.status(404).json({ error: "Không tìm thấy từ" });
   delete data.words[req.params.id];
-  await saveData(data);
+  await saveData(req, data);
   res.json({ ok: true });
 });
 
 // Set status: known / unsure / review
 app.post("/api/words/:id/status", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const word = data.words[req.params.id];
   if (!word) return res.status(404).json({ error: "Không tìm thấy từ" });
   const { status } = req.body;
@@ -516,7 +602,7 @@ app.post("/api/words/:id/status", async (req, res) => {
   word.status = status;
   word.lastReviewed = todayStr();
   word.reviewCount = (word.reviewCount || 0) + 1;
-  await saveData(data);
+  await saveData(req, data);
   res.json(word);
 });
 
@@ -552,7 +638,7 @@ function normalizeImportedItems(rawItems) {
 
 // List checklists (summary only)
 app.get("/api/checklists", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const list = Object.values(data.checklists).sort((a, b) =>
     (b.createdDate || "").localeCompare(a.createdDate || ""),
   );
@@ -561,7 +647,7 @@ app.get("/api/checklists", async (req, res) => {
 
 // Get one checklist (full, with items)
 app.get("/api/checklists/:id", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const c = data.checklists[req.params.id];
   if (!c) return res.status(404).json({ error: "Không tìm thấy checklist" });
   res.json(c);
@@ -569,7 +655,7 @@ app.get("/api/checklists/:id", async (req, res) => {
 
 // Create an empty checklist manually
 app.post("/api/checklists", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const { name } = req.body;
   if (!name || !name.trim())
     return res.status(400).json({ error: "Tên checklist không được để trống" });
@@ -581,14 +667,14 @@ app.post("/api/checklists", async (req, res) => {
     items: [],
   };
   data.checklists[id] = checklist;
-  await saveData(data);
+  await saveData(req, data);
   res.json(checklist);
 });
 
 // Import one checklist, or many, from JSON
 // Accepts: { name, items: [...] }  OR  { checklists: [ { name, items }, ... ] }
 app.post("/api/checklists/import", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const body = req.body || {};
   const rawList = Array.isArray(body.checklists) ? body.checklists : [body];
 
@@ -612,34 +698,34 @@ app.post("/api/checklists/import", async (req, res) => {
         'JSON không hợp lệ. Cần dạng { "name": "...", "items": [...] } và mỗi checklist phải có \'name\'.',
     });
   }
-  await saveData(data);
+  await saveData(req, data);
   res.json({ imported: created.length, checklists: created });
 });
 
 // Rename a checklist
 app.put("/api/checklists/:id", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const c = data.checklists[req.params.id];
   if (!c) return res.status(404).json({ error: "Không tìm thấy checklist" });
   const { name } = req.body;
   if (name && name.trim()) c.name = name.trim();
-  await saveData(data);
+  await saveData(req, data);
   res.json(c);
 });
 
 // Delete a checklist
 app.delete("/api/checklists/:id", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   if (!data.checklists[req.params.id])
     return res.status(404).json({ error: "Không tìm thấy checklist" });
   delete data.checklists[req.params.id];
-  await saveData(data);
+  await saveData(req, data);
   res.json({ ok: true });
 });
 
 // Add an item to a checklist
 app.post("/api/checklists/:id/items", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const c = data.checklists[req.params.id];
   if (!c) return res.status(404).json({ error: "Không tìm thấy checklist" });
   const { text } = req.body;
@@ -647,13 +733,13 @@ app.post("/api/checklists/:id/items", async (req, res) => {
     return res.status(400).json({ error: "Nội dung mục không được để trống" });
   const item = { id: crypto.randomUUID(), text: text.trim(), checked: false };
   c.items.push(item);
-  await saveData(data);
+  await saveData(req, data);
   res.json(item);
 });
 
 // Update an item: toggle checked and/or edit text
 app.put("/api/checklists/:id/items/:itemId", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const c = data.checklists[req.params.id];
   if (!c) return res.status(404).json({ error: "Không tìm thấy checklist" });
   const item = c.items.find((i) => i.id === req.params.itemId);
@@ -662,20 +748,25 @@ app.put("/api/checklists/:id/items/:itemId", async (req, res) => {
     item.text = req.body.text.trim();
   if (req.body.checked !== undefined) item.checked = !!req.body.checked;
   else if (req.body.toggle) item.checked = !item.checked;
-  await saveData(data);
+  await saveData(req, data);
   res.json(item);
 });
 
 // Delete an item
 app.delete("/api/checklists/:id/items/:itemId", async (req, res) => {
-  const data = await loadData();
+  const data = await loadData(req);
   const c = data.checklists[req.params.id];
   if (!c) return res.status(404).json({ error: "Không tìm thấy checklist" });
   const idx = c.items.findIndex((i) => i.id === req.params.itemId);
   if (idx === -1) return res.status(404).json({ error: "Không tìm thấy mục" });
   c.items.splice(idx, 1);
-  await saveData(data);
+  await saveData(req, data);
   res.json({ ok: true });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: "Lỗi máy chủ" });
 });
 
 const server = app.listen(PORT, HOST, () => {

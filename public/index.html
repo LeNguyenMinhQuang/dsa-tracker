@@ -12,6 +12,17 @@
   </head>
 
   <body>
+    <!-- Màn chọn người dùng: chỉ hiện khi body có class "picking" -->
+    <section class="user-screen" id="userScreen">
+      <div class="user-wrap">
+        <h1 class="macro">USER<span class="reg">®</span></h1>
+        <p class="brand-sub">Bấm vào tên để vào / không cần mật khẩu</p>
+        <div class="stripe" aria-hidden="true"></div>
+        <div class="user-list" id="userList"></div>
+        <div class="import-error" id="userError"></div>
+      </div>
+    </section>
+
     <div class="app">
       <header class="topbar">
         <div class="brand">
@@ -20,11 +31,16 @@
         </div>
         <div class="topbar-meta">
           <span class="barcode" aria-hidden="true"></span>
-          <span>UNIT / D-01</span>
-          <span>REV 2.6</span>
-          <button class="icon-btn" id="settingsBtn" title="Cài đặt">
-            [ Cài đặt ]
-          </button>
+          <span id="userLabel">USER / —</span>
+          <span>REV 2.7</span>
+          <div class="meta-actions">
+            <button class="icon-btn" id="switchUserBtn" title="Đổi người dùng">
+              [ Đổi user ]
+            </button>
+            <button class="icon-btn" id="settingsBtn" title="Cài đặt">
+              [ Cài đặt ]
+            </button>
+          </div>
         </div>
       </header>
       <div class="stripe" aria-hidden="true"></div>
@@ -181,6 +197,24 @@
         Thay đổi ở đây chỉ áp dụng cho những ngày chưa từng mở trước đó — các
         ngày đã có dữ liệu sẽ giữ nguyên số lượng cũ.
       </p>
+    </div>
+
+    <!-- Add user modal (màn chọn người dùng) -->
+    <div class="overlay" id="userOverlay"></div>
+    <div class="modal" id="userModal">
+      <h2>Thêm người dùng</h2>
+      <label>Tên</label>
+      <input
+        type="text"
+        id="newUserName"
+        maxlength="30"
+        placeholder="VD: Lan"
+      />
+      <div class="import-error" id="newUserError"></div>
+      <div class="task-actions">
+        <button class="btn btn-secondary" id="userCancel">Hủy</button>
+        <button class="btn btn-primary" id="userCreate">Tạo</button>
+      </div>
     </div>
 
     <!-- Add/Edit word modal -->

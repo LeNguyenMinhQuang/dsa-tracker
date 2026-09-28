@@ -12,7 +12,162 @@ const overlay = document.getElementById("overlay");
 const dayPanel = document.getElementById("dayPanel");
 const panelBody = document.getElementById("panelBody");
 
+// ===================== Users =====================
+// Không có mật khẩu: trình duyệt nhớ user đã chọn trong localStorage và gửi
+// id đó qua header X-User-Id ở mọi request để server tách dữ liệu từng người.
+
+const USER_KEY = "dsa-user";
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY));
+  } catch (e) {
+    return null;
+  }
+}
+
+let currentUser = getStoredUser();
+
+function api(url, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (currentUser && currentUser.id) headers["X-User-Id"] = currentUser.id;
+  return window.fetch(url, { ...opts, headers }).then((res) => {
+    if (res.status === 401 && !url.startsWith("/api/users")) {
+      // User không còn hợp lệ: quay về màn chọn user.
+      // Trả về promise không bao giờ resolve để các hàm gọi phía sau không xử lý dữ liệu lỗi.
+      try {
+        localStorage.removeItem(USER_KEY);
+      } catch (e) {}
+      showUserPicker();
+      return new Promise(() => {});
+    }
+    return res;
+  });
+}
+
+function selectUser(user) {
+  try {
+    localStorage.setItem(
+      USER_KEY,
+      JSON.stringify({ id: user.id, name: user.name }),
+    );
+  } catch (e) {}
+  location.reload(); // tải lại để toàn bộ trạng thái giao diện sạch, theo đúng user mới
+}
+
+function switchUser() {
+  try {
+    localStorage.removeItem(USER_KEY);
+  } catch (e) {}
+  location.reload();
+}
+
+async function showUserPicker() {
+  document.body.classList.add("picking");
+  const list = document.getElementById("userList");
+  const err = document.getElementById("userError");
+  err.textContent = "";
+  try {
+    const res = await api("/api/users");
+    if (!res.ok) throw new Error("bad status");
+    renderUserList(await res.json());
+  } catch (e) {
+    list.innerHTML = "";
+    err.textContent =
+      "Không tải được danh sách người dùng. Kiểm tra kết nối rồi tải lại trang.";
+  }
+}
+
+function renderUserList(users) {
+  const list = document.getElementById("userList");
+  list.innerHTML = "";
+
+  users.forEach((u) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "user-card";
+    const name = document.createElement("span");
+    name.className = "user-card-name";
+    name.textContent = u.name;
+    const meta = document.createElement("span");
+    meta.className = "user-card-meta";
+    meta.textContent = u.createdDate
+      ? "Tạo ngày " + fmtDateVN(u.createdDate)
+      : "";
+    card.append(name, meta);
+    card.addEventListener("click", () => selectUser(u));
+    list.appendChild(card);
+  });
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "user-card user-add";
+  add.title = "Thêm người dùng";
+  add.innerHTML =
+    '<span class="user-add-plus">+</span><span class="user-card-meta">Thêm người dùng</span>';
+  add.addEventListener("click", openUserModal);
+  list.appendChild(add);
+}
+
+function openUserModal() {
+  document.getElementById("newUserName").value = "";
+  document.getElementById("newUserError").textContent = "";
+  document.getElementById("userOverlay").classList.add("show");
+  document.getElementById("userModal").classList.add("show");
+  document.getElementById("newUserName").focus();
+}
+
+function closeUserModal() {
+  document.getElementById("userOverlay").classList.remove("show");
+  document.getElementById("userModal").classList.remove("show");
+}
+
+async function createUser() {
+  const input = document.getElementById("newUserName");
+  const err = document.getElementById("newUserError");
+  err.textContent = "";
+  const name = input.value.trim();
+  if (!name) {
+    input.focus();
+    return;
+  }
+  try {
+    const res = await api("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      err.textContent = data.error || "Không tạo được người dùng";
+      return;
+    }
+    selectUser(data);
+  } catch (e) {
+    err.textContent = "Lỗi kết nối, thử lại sau.";
+  }
+}
+
+function initUserPicker() {
+  document
+    .getElementById("userCancel")
+    .addEventListener("click", closeUserModal);
+  document
+    .getElementById("userOverlay")
+    .addEventListener("click", closeUserModal);
+  document.getElementById("userCreate").addEventListener("click", createUser);
+  document.getElementById("newUserName").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") createUser();
+  });
+}
+
 function init() {
+  document.getElementById("userLabel").textContent =
+    "USER / " + currentUser.name;
+  document
+    .getElementById("switchUserBtn")
+    .addEventListener("click", switchUser);
+
   const now = new Date();
   state.year = now.getFullYear();
   state.month = now.getMonth() + 1;
@@ -97,7 +252,7 @@ async function loadMonth() {
   ];
   monthLabel.textContent = `${monthNames[state.month - 1]}, ${state.year}`;
 
-  const res = await fetch(`/api/month/${state.year}/${state.month}`);
+  const res = await api(`/api/month/${state.year}/${state.month}`);
   const data = await res.json();
   state.today = data.today;
   renderCalendar(data.days);
@@ -164,7 +319,7 @@ function renderCalendar(days) {
 
 async function openPanel(date) {
   state.activeDate = date;
-  const res = await fetch(`/api/day/${date}`);
+  const res = await api(`/api/day/${date}`);
   const data = await res.json();
   state.currentDay = data;
   renderPanel(data);
@@ -325,7 +480,7 @@ async function saveNewProblem(index, expand) {
     return;
   }
 
-  const res = await fetch(`/api/day/${state.activeDate}/new/${index}`, {
+  const res = await api(`/api/day/${state.activeDate}/new/${index}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, difficulty, starred, note }),
@@ -337,14 +492,11 @@ async function saveNewProblem(index, expand) {
 }
 
 async function toggleNewComplete(index) {
-  const res = await fetch(
-    `/api/day/${state.activeDate}/new/${index}/complete`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    },
-  );
+  const res = await api(`/api/day/${state.activeDate}/new/${index}/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
   if (res.ok) {
     await refreshPanel();
     await loadMonth();
@@ -428,7 +580,7 @@ function buildReviewRow(review, index) {
 }
 
 async function toggleReviewComplete(index) {
-  const res = await fetch(
+  const res = await api(
     `/api/day/${state.activeDate}/review/${index}/complete`,
     {
       method: "POST",
@@ -523,7 +675,7 @@ function buildRandomRow(random, index) {
 }
 
 async function toggleRandomComplete(index) {
-  const res = await fetch(
+  const res = await api(
     `/api/day/${state.activeDate}/random/${index}/complete`,
     {
       method: "POST",
@@ -538,10 +690,9 @@ async function toggleRandomComplete(index) {
 }
 
 async function rerollRandom(index) {
-  const res = await fetch(
-    `/api/day/${state.activeDate}/random/${index}/reroll`,
-    { method: "POST" },
-  );
+  const res = await api(`/api/day/${state.activeDate}/random/${index}/reroll`, {
+    method: "POST",
+  });
   if (res.ok) {
     await refreshPanel();
     await loadMonth();
@@ -549,7 +700,7 @@ async function rerollRandom(index) {
 }
 
 async function refreshPanel() {
-  const res = await fetch(`/api/day/${state.activeDate}`);
+  const res = await api(`/api/day/${state.activeDate}`);
   const data = await res.json();
   state.currentDay = data;
   renderPanel(data);
@@ -573,7 +724,7 @@ function addReviewIntervalRow(value) {
 }
 
 async function openSettings() {
-  const res = await fetch("/api/settings");
+  const res = await api("/api/settings");
   const settings = await res.json();
 
   document.getElementById("newCountInput").value = settings.newCount;
@@ -621,7 +772,7 @@ async function saveSettings() {
     return;
   }
 
-  await fetch("/api/settings", {
+  await api("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ newCount, reviewIntervals, randomCount }),
@@ -761,7 +912,7 @@ function initVocab() {
 }
 
 async function loadGroups() {
-  const res = await fetch("/api/groups");
+  const res = await api("/api/groups");
   const groups = await res.json();
   vocab.groupList = groups;
   vocab.groups = {};
@@ -799,7 +950,7 @@ function groupLabel(groupId) {
 }
 
 async function loadWords() {
-  const res = await fetch("/api/words");
+  const res = await api("/api/words");
   vocab.words = await res.json();
   renderWordList();
   updateVocabStats();
@@ -939,7 +1090,7 @@ function buildWordCard(word) {
 }
 
 async function setWordStatus(id, status) {
-  const res = await fetch(`/api/words/${id}/status`, {
+  const res = await api(`/api/words/${id}/status`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
@@ -1029,7 +1180,7 @@ async function saveWord() {
   const url = vocab.editingId ? `/api/words/${vocab.editingId}` : "/api/words";
   const method = vocab.editingId ? "PUT" : "POST";
 
-  const res = await fetch(url, {
+  const res = await api(url, {
     method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ term, pronunciation, groupId, meanings }),
@@ -1043,7 +1194,7 @@ async function saveWord() {
 async function deleteWord() {
   if (!vocab.editingId) return;
   if (!confirm("Xóa từ này khỏi kho từ vựng?")) return;
-  const res = await fetch(`/api/words/${vocab.editingId}`, {
+  const res = await api(`/api/words/${vocab.editingId}`, {
     method: "DELETE",
   });
   if (res.ok) {
@@ -1194,7 +1345,7 @@ function flipCard() {
 
 async function answerCard(result) {
   const w = testState.queue[testState.index];
-  await fetch(`/api/words/${w.id}/status`, {
+  await api(`/api/words/${w.id}/status`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status: result }),
@@ -1378,7 +1529,7 @@ function renderQuizQuestion(w, options) {
 
 async function applyQuizStatusChange(word, status) {
   try {
-    const res = await fetch(`/api/words/${word.id}/status`, {
+    const res = await api(`/api/words/${word.id}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -1517,7 +1668,7 @@ function initChecklist() {
 }
 
 async function loadChecklists() {
-  const res = await fetch("/api/checklists");
+  const res = await api("/api/checklists");
   checklistState.list = await res.json();
   renderChecklistGrid();
 }
@@ -1567,7 +1718,7 @@ async function createChecklist() {
     document.getElementById("newChecklistName").focus();
     return;
   }
-  const res = await fetch("/api/checklists", {
+  const res = await api("/api/checklists", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
@@ -1627,7 +1778,7 @@ async function submitImport() {
     return;
   }
 
-  const res = await fetch("/api/checklists/import", {
+  const res = await api("/api/checklists/import", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(parsed),
@@ -1648,7 +1799,7 @@ async function submitImport() {
 
 async function openChecklistPanel(id) {
   checklistState.activeId = id;
-  const res = await fetch(`/api/checklists/${id}`);
+  const res = await api(`/api/checklists/${id}`);
   if (!res.ok) return;
   checklistState.active = await res.json();
   renderChecklistPanel();
@@ -1706,7 +1857,7 @@ function renderChecklistPanel() {
 }
 
 async function toggleItem(itemId, checked) {
-  const res = await fetch(
+  const res = await api(
     `/api/checklists/${checklistState.activeId}/items/${itemId}`,
     {
       method: "PUT",
@@ -1729,7 +1880,7 @@ async function addItemToActive() {
     input.focus();
     return;
   }
-  const res = await fetch(`/api/checklists/${checklistState.activeId}/items`, {
+  const res = await api(`/api/checklists/${checklistState.activeId}/items`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
@@ -1745,7 +1896,7 @@ async function addItemToActive() {
 }
 
 async function removeItem(itemId) {
-  const res = await fetch(
+  const res = await api(
     `/api/checklists/${checklistState.activeId}/items/${itemId}`,
     { method: "DELETE" },
   );
@@ -1761,7 +1912,7 @@ async function removeItem(itemId) {
 async function deleteActiveChecklist() {
   if (!checklistState.activeId) return;
   if (!confirm("Xóa toàn bộ checklist này?")) return;
-  const res = await fetch(`/api/checklists/${checklistState.activeId}`, {
+  const res = await api(`/api/checklists/${checklistState.activeId}`, {
     method: "DELETE",
   });
   if (res.ok) {
@@ -1774,4 +1925,10 @@ async function deleteActiveChecklist() {
 // Called last, after every const/function above has been defined, so init()
 // (and everything it calls: initTabs, initVocab, initChecklist) can safely
 // reference vocab, checklistState, SAMPLE_CHECKLIST_JSON, etc.
-init();
+// Chưa chọn user -> hiện màn chọn user; đã chọn -> vào app luôn.
+initUserPicker();
+if (currentUser && currentUser.id) {
+  init();
+} else {
+  showUserPicker();
+}
