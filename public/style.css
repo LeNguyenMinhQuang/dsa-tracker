@@ -1152,7 +1152,7 @@ label,
   left: 50%;
   transform: translate(-50%, -50%);
   display: none;
-  width: min(400px, 94vw);
+  width: min(600px, 94vw);
   padding: 16px;
   background: var(--sheet);
   border: 3px solid var(--ink);
