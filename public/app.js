@@ -1014,22 +1014,29 @@ function renderWordList() {
   items.forEach((word) => list.appendChild(buildWordCard(word)));
 }
 
-// ---------- Text-to-speech (Anh-Anh / Anh-Mỹ) ----------
+// ---------- Phát âm (Anh-Anh / Anh-Mỹ) ----------
+// Thứ tự: Youdao (mp3 giọng người) -> Free Dictionary API -> speechSynthesis
 
-// Thứ tự: Free Dictionary API (mp3 giọng người) -> Google TTS -> speechSynthesis
-
-const audioCache = new Map(); // term -> { uk, us }
 let currentAudio = null;
 
+function youdaoUrl(text, lang) {
+  const type = lang === "en-GB" ? 1 : 2; // 1 = Anh, 2 = Mỹ
+  return `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=${type}`;
+}
+
+const dictAudioCache = new Map();
 async function getDictAudio(term, lang) {
   const key = term.trim().toLowerCase();
-  if (!key || key.includes(" ")) return null; // API từ điển chỉ hỗ trợ từ đơn
+  if (!key || key.includes(" ")) return null;
 
-  if (!audioCache.has(key)) {
+  if (!dictAudioCache.has(key)) {
     const result = { uk: null, us: null };
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000); // API hay treo, chỉ chờ 3s
     try {
       const res = await fetch(
         `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(key)}`,
+        { signal: ctrl.signal },
       );
       if (res.ok) {
         const data = await res.json();
@@ -1042,16 +1049,14 @@ async function getDictAudio(term, lang) {
         }
       }
     } catch (e) {
-      // lỗi mạng: bỏ qua, dùng nguồn dự phòng
+      // lỗi mạng / timeout: bỏ qua
+    } finally {
+      clearTimeout(timer);
     }
-    audioCache.set(key, result);
+    dictAudioCache.set(key, result);
   }
-  const r = audioCache.get(key);
+  const r = dictAudioCache.get(key);
   return lang === "en-GB" ? r.uk : r.us;
-}
-
-function googleTtsUrl(text, lang) {
-  return `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${lang}&q=${encodeURIComponent(text)}`;
 }
 
 function speakWithSynthesis(text, lang) {
@@ -1063,28 +1068,34 @@ function speakWithSynthesis(text, lang) {
   window.speechSynthesis.speak(u);
 }
 
+function playUrl(src) {
+  const audio = new Audio(src);
+  currentAudio = audio;
+  return audio.play(); // reject nếu tải lỗi / không phải audio
+}
+
 async function speak(text, lang) {
   if (currentAudio) {
     currentAudio.pause();
     currentAudio = null;
   }
 
-  const sources = [];
-  const dictUrl = await getDictAudio(text, lang);
-  if (dictUrl) sources.push(dictUrl);
-  sources.push(googleTtsUrl(text, lang));
+  // 1) Youdao: phát ngay trong cú bấm, không await gì trước đó
+  try {
+    await playUrl(youdaoUrl(text, lang));
+    return;
+  } catch (e) {}
 
-  for (const src of sources) {
-    try {
-      const audio = new Audio(src);
-      currentAudio = audio;
-      await audio.play(); // lỗi tải/định dạng sẽ reject -> thử nguồn tiếp theo
+  // 2) Free Dictionary API
+  try {
+    const dictUrl = await getDictAudio(text, lang);
+    if (dictUrl) {
+      await playUrl(dictUrl);
       return;
-    } catch (e) {
-      // thử nguồn kế tiếp
     }
-  }
+  } catch (e) {}
 
+  // 3) Giọng máy
   speakWithSynthesis(text, lang);
 }
 
