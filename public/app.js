@@ -1014,6 +1014,65 @@ function renderWordList() {
   items.forEach((word) => list.appendChild(buildWordCard(word)));
 }
 
+// ---------- Text-to-speech (Anh-Anh / Anh-Mỹ) ----------
+
+let ttsVoices = [];
+function loadVoices() {
+  if ("speechSynthesis" in window) {
+    ttsVoices = window.speechSynthesis.getVoices();
+  }
+}
+if ("speechSynthesis" in window) {
+  loadVoices();
+  // Chrome nạp danh sách giọng bất đồng bộ
+  window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+}
+
+function pickVoice(lang) {
+  // Ưu tiên giọng khớp chính xác (en-GB / en-US), sau đó khớp không phân biệt _ và -
+  const norm = (s) => s.replace("_", "-").toLowerCase();
+  return (
+    ttsVoices.find((v) => norm(v.lang) === lang.toLowerCase()) ||
+    ttsVoices.find((v) => norm(v.lang).startsWith(lang.toLowerCase())) ||
+    null
+  );
+}
+
+function speak(text, lang) {
+  if (!("speechSynthesis" in window)) {
+    alert("Trình duyệt của bạn không hỗ trợ đọc phát âm.");
+    return;
+  }
+  window.speechSynthesis.cancel(); // dừng câu đang đọc dở
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang;
+  const voice = pickVoice(lang);
+  if (voice) u.voice = voice;
+  u.rate = 0.9;
+  window.speechSynthesis.speak(u);
+}
+
+function buildSpeakButtons(term) {
+  const wrap = document.createElement("span");
+  wrap.className = "speak-group";
+  [
+    { lang: "en-GB", label: "UK", title: "Phát âm Anh - Anh" },
+    { lang: "en-US", label: "US", title: "Phát âm Anh - Mỹ" },
+  ].forEach(({ lang, label, title }) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "speak-btn";
+    btn.title = title;
+    btn.innerHTML = `<span class="speak-icon">🔊</span><span class="speak-label">${label}</span>`;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation(); // không làm mở/đóng thẻ từ
+      speak(term, lang);
+    });
+    wrap.appendChild(btn);
+  });
+  return wrap;
+}
+
 function buildWordCard(word) {
   const card = document.createElement("div");
   card.className = "word-card";
@@ -1037,6 +1096,10 @@ function buildWordCard(word) {
     </div>
     ${groupTag}
   `;
+
+  head
+    .querySelector(".word-card-head-top")
+    .appendChild(buildSpeakButtons(word.term));
 
   const body = document.createElement("div");
   body.className = "word-card-body";
@@ -1337,6 +1400,11 @@ function renderTestCard() {
       )
       .join("");
   document.getElementById("flashcardInner").classList.remove("flipped");
+  const front = document.querySelector(".flashcard-front");
+  front.querySelector(".speak-group")?.remove();
+  const sp = buildSpeakButtons(w.term);
+  sp.style.marginTop = "12px";
+  front.appendChild(sp);
 }
 
 function flipCard() {
@@ -1525,6 +1593,14 @@ function renderQuizQuestion(w, options) {
     );
     optWrap.appendChild(btn);
   });
+  const termEl = document.getElementById("quizTerm");
+  termEl.parentNode.querySelector(".quiz-speak")?.remove();
+  const sp = buildSpeakButtons(w.term);
+  sp.classList.add("quiz-speak");
+  termEl.parentNode.insertBefore(
+    sp,
+    document.getElementById("quizTermPron").nextSibling,
+  );
 }
 
 async function applyQuizStatusChange(word, status) {

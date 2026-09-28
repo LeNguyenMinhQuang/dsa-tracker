@@ -1644,3 +1644,40 @@ body.picking .app {
     transition: none !important;
   }
 }
+
+/* ===================== Speak buttons ===================== */
+
+.speak-group {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 4px;
+}
+.speak-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px;
+  background: transparent;
+  border: 2px solid var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.speak-btn:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.speak-btn:active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.speak-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+.quiz-speak {
+  margin-left: 0;
+}
