@@ -1016,40 +1016,76 @@ function renderWordList() {
 
 // ---------- Text-to-speech (Anh-Anh / Anh-Mỹ) ----------
 
-let ttsVoices = [];
-function loadVoices() {
-  if ("speechSynthesis" in window) {
-    ttsVoices = window.speechSynthesis.getVoices();
+// Thứ tự: Free Dictionary API (mp3 giọng người) -> Google TTS -> speechSynthesis
+
+const audioCache = new Map(); // term -> { uk, us }
+let currentAudio = null;
+
+async function getDictAudio(term, lang) {
+  const key = term.trim().toLowerCase();
+  if (!key || key.includes(" ")) return null; // API từ điển chỉ hỗ trợ từ đơn
+
+  if (!audioCache.has(key)) {
+    const result = { uk: null, us: null };
+    try {
+      const res = await fetch(
+        `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(key)}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        for (const entry of data) {
+          for (const p of entry.phonetics || []) {
+            if (!p.audio) continue;
+            if (!result.uk && /-uk\.mp3$/i.test(p.audio)) result.uk = p.audio;
+            if (!result.us && /-us\.mp3$/i.test(p.audio)) result.us = p.audio;
+          }
+        }
+      }
+    } catch (e) {
+      // lỗi mạng: bỏ qua, dùng nguồn dự phòng
+    }
+    audioCache.set(key, result);
   }
-}
-if ("speechSynthesis" in window) {
-  loadVoices();
-  // Chrome nạp danh sách giọng bất đồng bộ
-  window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+  const r = audioCache.get(key);
+  return lang === "en-GB" ? r.uk : r.us;
 }
 
-function pickVoice(lang) {
-  // Ưu tiên giọng khớp chính xác (en-GB / en-US), sau đó khớp không phân biệt _ và -
-  const norm = (s) => s.replace("_", "-").toLowerCase();
-  return (
-    ttsVoices.find((v) => norm(v.lang) === lang.toLowerCase()) ||
-    ttsVoices.find((v) => norm(v.lang).startsWith(lang.toLowerCase())) ||
-    null
-  );
+function googleTtsUrl(text, lang) {
+  return `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${lang}&q=${encodeURIComponent(text)}`;
 }
 
-function speak(text, lang) {
-  if (!("speechSynthesis" in window)) {
-    alert("Trình duyệt của bạn không hỗ trợ đọc phát âm.");
-    return;
-  }
-  window.speechSynthesis.cancel(); // dừng câu đang đọc dở
+function speakWithSynthesis(text, lang) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
-  const voice = pickVoice(lang);
-  if (voice) u.voice = voice;
   u.rate = 0.9;
   window.speechSynthesis.speak(u);
+}
+
+async function speak(text, lang) {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+
+  const sources = [];
+  const dictUrl = await getDictAudio(text, lang);
+  if (dictUrl) sources.push(dictUrl);
+  sources.push(googleTtsUrl(text, lang));
+
+  for (const src of sources) {
+    try {
+      const audio = new Audio(src);
+      currentAudio = audio;
+      await audio.play(); // lỗi tải/định dạng sẽ reject -> thử nguồn tiếp theo
+      return;
+    } catch (e) {
+      // thử nguồn kế tiếp
+    }
+  }
+
+  speakWithSynthesis(text, lang);
 }
 
 function buildSpeakButtons(term) {
