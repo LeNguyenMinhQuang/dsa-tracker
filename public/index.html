@@ -9,364 +9,35 @@
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2311151C%22/><text x=%2250%22 y=%2266%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22%235B8CFF%22 font-family=%22monospace%22>&lt;/&gt;</text></svg>"
     />
     <link rel="stylesheet" href="style.css" />
-    <style>
-      /* ---- Bổ sung style cho các phần tử mới của tính năng Từ vựng TOEIC ----
-     (Không đụng tới style.css gốc, chỉ thêm phần cần cho phát âm / nhóm chủ đề) */
-      .word-pron {
-        font-size: 0.85em;
-        opacity: 0.65;
-        font-style: italic;
-        margin-left: 6px;
-        font-weight: 400;
-      }
-
-      .group-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 0.72em;
-        padding: 2px 8px;
-        border-radius: 999px;
-        background: rgba(91, 140, 255, 0.15);
-        color: #5b8cff;
-        white-space: nowrap;
-        font-weight: 600;
-      }
-
-      .meaning-explain {
-        font-size: 0.85em;
-        opacity: 0.7;
-        font-style: italic;
-        margin: 2px 0 4px;
-      }
-
-      .vocab-toolbar-row2 {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
-
-      .group-select {
-        flex: 1;
-        min-width: 0;
-        padding: 8px 10px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.06);
-        color: inherit;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        font-size: 0.9em;
-      }
-
-      .field-label-inline {
-        font-size: 0.8em;
-        opacity: 0.65;
-        margin-top: 10px;
-        margin-bottom: 4px;
-        display: block;
-      }
-
-      .word-card-head-top {
-        display: flex;
-        align-items: baseline;
-        flex-wrap: wrap;
-        gap: 4px;
-      }
-
-      /* ---- Bổ sung style cho tính năng Checklist ---- */
-      .checklist-toolbar {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-      }
-
-      .checklist-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 12px;
-      }
-
-      .checklist-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 14px 16px;
-        cursor: pointer;
-        transition:
-          background 0.15s,
-          border-color 0.15s;
-      }
-
-      .checklist-card:hover {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(91, 140, 255, 0.4);
-      }
-
-      .checklist-card-name {
-        font-weight: 600;
-        margin-bottom: 4px;
-        word-break: break-word;
-      }
-
-      .checklist-card-meta {
-        font-size: 0.8em;
-        opacity: 0.65;
-        margin-bottom: 10px;
-      }
-
-      .checklist-progress-track {
-        height: 6px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        overflow: hidden;
-      }
-
-      .checklist-progress-fill {
-        height: 100%;
-        background: #5b8cff;
-        border-radius: 999px;
-        transition: width 0.2s;
-      }
-
-      .checklist-items-empty {
-        opacity: 0.6;
-        font-size: 0.9em;
-        padding: 12px 0;
-      }
-
-      .checklist-item-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 10px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-      }
-
-      .checklist-item-row:last-child {
-        border-bottom: none;
-      }
-
-      .checklist-check {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-        flex: 1;
-        min-width: 0;
-      }
-
-      .checklist-check input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        flex-shrink: 0;
-        accent-color: #5b8cff;
-        cursor: pointer;
-      }
-
-      .checklist-item-text {
-        word-break: break-word;
-      }
-
-      .checklist-item-text.done {
-        text-decoration: line-through;
-        opacity: 0.5;
-      }
-
-      .checklist-item-remove {
-        background: none;
-        border: none;
-        color: inherit;
-        opacity: 0.45;
-        cursor: pointer;
-        font-size: 0.95em;
-        padding: 4px 6px;
-        flex-shrink: 0;
-      }
-
-      .checklist-item-remove:hover {
-        opacity: 1;
-        color: #ff6b6b;
-      }
-
-      .checklist-add-item-row {
-        display: flex;
-        gap: 8px;
-        margin-top: 14px;
-      }
-
-      .checklist-add-item-row input {
-        flex: 1;
-      }
-
-      .checklist-panel-meta {
-        font-size: 0.85em;
-        opacity: 0.65;
-        margin-bottom: 16px;
-      }
-
-      .import-textarea {
-        width: 100%;
-        min-height: 220px;
-        font-family: monospace;
-        font-size: 0.85em;
-        padding: 10px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        color: inherit;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        resize: vertical;
-        box-sizing: border-box;
-      }
-
-      .import-error {
-        color: #ff6b6b;
-        font-size: 0.85em;
-        margin-top: 8px;
-        min-height: 1.2em;
-      }
-
-      .import-help {
-        font-size: 0.8em;
-        opacity: 0.65;
-        margin: 8px 0;
-        line-height: 1.5;
-      }
-
-      .import-help code {
-        background: rgba(255, 255, 255, 0.08);
-        padding: 1px 5px;
-        border-radius: 4px;
-      }
-
-      .import-file-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-        flex-wrap: wrap;
-      }
-
-      /* ---- Bổ sung style cho panel ngày: nhiều bài mới / ôn tập / random ---- */
-      .panel-section-title {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-muted);
-        margin: 4px 2px 2px;
-        font-weight: 700;
-      }
-
-      .review-items {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .review-item-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 12px 0;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .review-item-row:last-child {
-        border-bottom: none;
-      }
-
-      .review-item-info {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .review-item-actions {
-        display: flex;
-        gap: 6px;
-        flex-shrink: 0;
-      }
-
-      .review-item-actions .btn {
-        flex: none;
-        padding: 8px 10px;
-        font-size: 11px;
-      }
-
-      .review-item-empty {
-        color: var(--text-muted);
-        font-style: italic;
-        font-size: 12px;
-        padding: 4px 0;
-      }
-
-      /* ---- Bổ sung style cho Cài đặt: số lượng bài + nhiều vòng ôn tập ---- */
-      .review-intervals-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-
-      .review-interval-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .review-interval-row input[type="number"] {
-        width: 70px;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        color: var(--text);
-        padding: 8px 9px;
-        border-radius: 7px;
-        font-family: "Inter", sans-serif;
-        font-size: 13px;
-      }
-
-      .review-interval-suffix {
-        font-size: 12px;
-        color: var(--text-muted);
-        flex: 1;
-      }
-
-      .remove-review-interval {
-        background: transparent;
-        border: none;
-        color: var(--text-muted);
-        cursor: pointer;
-        font-size: 14px;
-        padding: 4px 6px;
-      }
-
-      .remove-review-interval:hover {
-        color: #f87171;
-      }
-    </style>
   </head>
 
   <body>
     <div class="app">
       <header class="topbar">
         <div class="brand">
-          <span class="brand-mark">&lt;/&gt;</span>
-          <div class="brand-text">
-            <h1>DSA Tracker</h1>
-            <p>lịch luyện thuật toán</p>
-          </div>
+          <h1 class="macro">DSA<span class="reg">®</span></h1>
+          <p class="brand-sub">Tracker / lịch luyện thuật toán</p>
         </div>
-        <button class="icon-btn" id="settingsBtn" title="Cài đặt">⚙</button>
+        <div class="topbar-meta">
+          <span class="barcode" aria-hidden="true"></span>
+          <span>UNIT / D-01</span>
+          <span>REV 2.6</span>
+          <button class="icon-btn" id="settingsBtn" title="Cài đặt">
+            [ Cài đặt ]
+          </button>
+        </div>
       </header>
+      <div class="stripe" aria-hidden="true"></div>
 
       <nav class="tabs">
         <button class="tab-btn active" id="tabBtnDsa" data-tab="dsa">
-          📅 Lịch DSA
+          Lịch DSA
         </button>
         <button class="tab-btn" id="tabBtnVocab" data-tab="vocab">
-          📚 Từ vựng
+          Từ vựng
         </button>
         <button class="tab-btn" id="tabBtnChecklist" data-tab="checklist">
-          ✅ Checklist
+          Checklist
         </button>
       </nav>
 
@@ -403,7 +74,7 @@
         <section class="tab-panel" id="tab-vocab">
           <div class="vocab-toolbar">
             <div class="vocab-search">
-              <span class="search-icon">⌕</span>
+              <span class="search-icon">&gt;&gt;</span>
               <input
                 type="text"
                 id="vocabSearch"
@@ -425,10 +96,10 @@
           <div class="vocab-actions">
             <button class="btn btn-secondary" id="addWordBtn">+ Thêm từ</button>
             <button class="btn btn-primary" id="testModeBtn">
-              🔁 Kiểm tra <span class="badge-count" id="unsureCount">0</span>
+              Kiểm tra <span class="badge-count" id="unsureCount">0</span>
             </button>
             <button class="btn btn-secondary" id="quizModeBtn">
-              🧠 Test trắc nghiệm
+              Test trắc nghiệm
             </button>
           </div>
 
@@ -449,14 +120,14 @@
               + Tạo checklist
             </button>
             <button class="btn btn-ghost" id="importChecklistBtn">
-              ⬆ Nhập JSON
+              Nhập JSON
             </button>
           </div>
           <div class="checklist-grid" id="checklistGrid"></div>
           <div class="empty-state" id="checklistEmpty" style="display: none">
             <p>
               Chưa có checklist nào. Bấm "+ Tạo checklist" để tạo thủ công, hoặc
-              "⬆ Nhập JSON" để import.
+              "Nhập JSON" để import.
             </p>
           </div>
         </section>
@@ -589,7 +260,7 @@
           <div class="flashcard-inner" id="flashcardInner">
             <div class="flashcard-face flashcard-front">
               <div class="fc-term" id="fcTerm">word</div>
-              <div class="fc-hint">Bấm để xem nghĩa</div>
+              <div class="fc-hint">&gt;&gt;&gt; Bấm để lật thẻ</div>
             </div>
             <div class="flashcard-face flashcard-back">
               <div class="fc-term-small" id="fcTermSmall">word</div>
@@ -604,7 +275,7 @@
         <button class="btn btn-success" id="testKnown">Đã nhớ</button>
       </div>
       <div class="test-done" id="testDone" style="display: none">
-        <div class="test-done-title">Hoàn thành! 🎉</div>
+        <div class="test-done-title">[ Hoàn thành ]</div>
         <p id="testDoneSummary"></p>
         <button class="btn btn-primary btn-block" id="testDoneClose">
           Đóng
@@ -691,7 +362,7 @@
         <div class="quiz-options" id="quizOptions"></div>
       </div>
       <div class="test-done" id="quizDone" style="display: none">
-        <div class="test-done-title">Hoàn thành! 🎉</div>
+        <div class="test-done-title">[ Hoàn thành ]</div>
         <p id="quizDoneSummary"></p>
         <button class="btn btn-primary btn-block" id="quizDoneClose">
           Đóng

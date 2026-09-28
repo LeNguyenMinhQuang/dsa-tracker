@@ -150,6 +150,14 @@ function renderCalendar(days) {
 
     calendarGrid.appendChild(cell);
   });
+
+  // Lấp nốt các ô trống cuối tháng để lưới luôn đủ 7 cột (khung blueprint kín)
+  const pad = (7 - ((offset + days.length) % 7)) % 7;
+  for (let i = 0; i < pad; i++) {
+    const empty = document.createElement("div");
+    empty.className = "day-cell empty";
+    calendarGrid.appendChild(empty);
+  }
 }
 
 // ---------- Day panel ----------
@@ -237,12 +245,12 @@ function buildNewCard(index, problem) {
     ? `${problem.name} · ${diffLabel[problem.difficulty]}`
     : "Chưa có bài — bấm để thêm";
   bar.innerHTML = `
-    <span class="task-icon">①</span>
+    <span class="task-icon">[N]</span>
     <div class="task-bar-text">
       <div class="task-title">Bài mới #${index + 1}</div>
       <div class="task-preview">${escapeHtml(preview)}</div>
     </div>
-    <span class="task-status">${problem && problem.completed ? "✅" : ""}</span>
+    <span class="task-status">${problem && problem.completed ? "[OK]" : ""}</span>
   `;
 
   const expand = document.createElement("div");
@@ -360,12 +368,12 @@ function buildReviewCard(reviews) {
       ? `${doneCount}/${withProblem.length} đã xong`
       : "Chưa có bài để ôn (chưa đủ dữ liệu lịch sử)";
   bar.innerHTML = `
-    <span class="task-icon">②</span>
+    <span class="task-icon">[R]</span>
     <div class="task-bar-text">
       <div class="task-title">Ôn lại (theo lịch)</div>
       <div class="task-preview">${escapeHtml(preview)}</div>
     </div>
-    <span class="task-status">${withProblem.length > 0 && doneCount === withProblem.length ? "✅" : ""}</span>
+    <span class="task-status">${withProblem.length > 0 && doneCount === withProblem.length ? "[OK]" : ""}</span>
   `;
 
   const expand = document.createElement("div");
@@ -451,12 +459,12 @@ function buildRandomCard(randoms) {
       ? `${doneCount}/${withProblem.length} đã xong`
       : "Chưa có bài cũ nào trong kho";
   bar.innerHTML = `
-    <span class="task-icon">③</span>
+    <span class="task-icon">[?]</span>
     <div class="task-bar-text">
       <div class="task-title">Bài ngẫu nhiên</div>
       <div class="task-preview">${escapeHtml(preview)}</div>
     </div>
-    <span class="task-status">${withProblem.length > 0 && doneCount === withProblem.length ? "✅" : ""}</span>
+    <span class="task-status">${withProblem.length > 0 && doneCount === withProblem.length ? "[OK]" : ""}</span>
   `;
 
   const expand = document.createElement("div");
@@ -501,7 +509,7 @@ function buildRandomRow(random, index) {
       ${p.note ? `<div class="r-note">${escapeHtml(p.note)}</div>` : ""}
     </div>
     <div class="review-item-actions">
-      <button class="btn btn-ghost random-item-reroll" title="Đổi bài khác">🎲</button>
+      <button class="btn btn-ghost random-item-reroll" title="Đổi bài khác">Đổi</button>
       <button class="btn btn-primary random-item-complete">${random.completed ? "Bỏ đánh dấu" : "Hoàn thành"}</button>
     </div>
   `;
