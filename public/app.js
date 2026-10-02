@@ -1491,7 +1491,8 @@ function closeTestMode() {
 // Khác với "Kiểm tra" (flashcard) ở trên: chế độ này KHÔNG bao giờ đổi
 // trạng thái known/review/unsure của từ. Nó chỉ là một vòng luyện tập:
 // - Chọn 1 trong 3 nhóm (chưa nhớ / kiểm tra lại / đã biết) + số lượng từ.
-// - Mỗi từ hiện ra kèm 4 đáp án tiếng Việt (1 đúng, 3 lấy random từ các từ khác).
+// - Có 2 chế độ: en2vi (hiện từ tiếng Anh + 4 nghĩa tiếng Việt) và
+//   vi2en (hiện nghĩa tiếng Việt + 4 từ tiếng Anh). Luôn 1 đúng, 3 lấy random từ các từ khác.
 // - Trả lời đúng -> từ bị loại khỏi hàng đợi (không đổi trạng thái).
 // - Trả lời sai -> từ được chèn lại vào hàng đợi ở một vị trí ngẫu nhiên để hỏi lại.
 const quizState = {
@@ -1499,6 +1500,7 @@ const quizState = {
   total: 0,
   mistakes: 0,
   selectedStatusChange: "",
+  mode: "en2vi", // "en2vi": hiện từ Anh, chọn nghĩa Việt | "vi2en": hiện nghĩa Việt, chọn từ Anh
 };
 
 function openQuizSetup() {
@@ -1521,6 +1523,10 @@ function openQuizSetup() {
     `input[name="quizSetupStatus"][value="${defaultQuizStatus}"]`,
   ).checked = true;
   updateQuizSetupHint();
+  // Mặc định luôn là chế độ cũ (hiện từ tiếng Anh).
+  document.querySelector(
+    'input[name="quizSetupMode"][value="en2vi"]',
+  ).checked = true;
 
   document.getElementById("quizSetupOverlay").classList.add("show");
   document.getElementById("quizSetupModal").classList.add("show");
@@ -1568,11 +1574,15 @@ function startQuizFromSetup() {
   if (isNaN(count) || count < 1) count = 1;
   if (count > pool.length) count = pool.length;
 
+  const modeEl = document.querySelector('input[name="quizSetupMode"]:checked');
+  const mode = modeEl ? modeEl.value : "en2vi";
+
   closeQuizSetup();
-  openQuizMode(shuffle(pool).slice(0, count));
+  openQuizMode(shuffle(pool).slice(0, count), mode);
 }
 
-function openQuizMode(words) {
+function openQuizMode(words, mode = "en2vi") {
+  quizState.mode = mode;
   quizState.queue = [...words];
   quizState.total = quizState.queue.length;
   quizState.mistakes = 0;
@@ -1601,31 +1611,50 @@ function resetQuizStatusSeg() {
 function buildQuizQuestion() {
   resetQuizStatusSeg();
   const w = quizState.queue[0];
-  const correctDef =
-    (w.meanings[0] && w.meanings[0].definition) || "(không có nghĩa)";
+  const defOf = (x) => (x.meanings[0] && x.meanings[0].definition) || "";
+  const correctDef = defOf(w) || "(không có nghĩa)";
 
-  // 3 đáp án nhiễu: lấy random từ nghĩa của các từ KHÁC trong toàn bộ kho từ vựng
-  const otherWords = vocab.words.filter(
-    (x) => x.id !== w.id && x.meanings[0] && x.meanings[0].definition,
-  );
-  const distractors = shuffle(otherWords).slice(0, 3);
+  let options;
+  if (quizState.mode === "vi2en") {
+    // Hiện nghĩa tiếng Việt -> 4 đáp án là từ tiếng Anh (1 đúng + 3 random từ khác).
+    // Loại các từ trùng term với đáp án đúng / trùng nhau để không có 2 đáp án giống hệt.
+    const seen = new Set([w.term.trim().toLowerCase()]);
+    const others = shuffle(vocab.words.filter((x) => x.id !== w.id)).filter(
+      (x) => {
+        const key = x.term.trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      },
+    );
+    options = shuffle([
+      { text: w.term, correct: true },
+      ...others.slice(0, 3).map((o) => ({ text: o.term, correct: false })),
+    ]);
+  } else {
+    // 3 đáp án nhiễu: lấy random từ nghĩa của các từ KHÁC trong toàn bộ kho từ vựng
+    const otherWords = vocab.words.filter((x) => x.id !== w.id && defOf(x));
+    const distractors = shuffle(otherWords).slice(0, 3);
+    options = shuffle([
+      { text: correctDef, correct: true },
+      ...distractors.map((o) => ({ text: defOf(o), correct: false })),
+    ]);
+  }
 
-  const options = shuffle([
-    { text: correctDef, correct: true },
-    ...distractors.map((o) => ({
-      text: o.meanings[0].definition,
-      correct: false,
-    })),
-  ]);
-
-  renderQuizQuestion(w, options);
+  renderQuizQuestion(w, options, correctDef);
 }
 
-function renderQuizQuestion(w, options) {
+function renderQuizQuestion(w, options, correctDef) {
+  const isViToEn = quizState.mode === "vi2en";
   document.getElementById("quizProgress").textContent =
     `${quizState.total - quizState.queue.length + 1} / ${quizState.total}`;
-  document.getElementById("quizTerm").textContent = w.term;
-  document.getElementById("quizTermPron").textContent = w.pronunciation || "";
+
+  const termEl = document.getElementById("quizTerm");
+  const pronEl = document.getElementById("quizTermPron");
+  termEl.classList.toggle("quiz-term-vi", isViToEn);
+  // vi2en: ẩn phiên âm + nút phát âm lúc đang hỏi vì sẽ lộ đáp án; hiện lại sau khi trả lời.
+  termEl.textContent = isViToEn ? correctDef : w.term;
+  pronEl.textContent = isViToEn ? "" : w.pronunciation || "";
 
   const optWrap = document.getElementById("quizOptions");
   optWrap.innerHTML = "";
@@ -1640,6 +1669,12 @@ function renderQuizQuestion(w, options) {
     );
     optWrap.appendChild(btn);
   });
+
+  termEl.parentNode.querySelector(".quiz-speak")?.remove();
+  if (!isViToEn) addQuizSpeak(w);
+}
+
+function addQuizSpeak(w) {
   const termEl = document.getElementById("quizTerm");
   termEl.parentNode.querySelector(".quiz-speak")?.remove();
   const sp = buildSpeakButtons(w.term);
@@ -1672,6 +1707,13 @@ function handleQuizAnswer(isCorrect, clickedBtn, optWrap) {
     if (b.dataset.correct === "1") b.classList.add("correct");
   });
   if (!isCorrect) clickedBtn.classList.add("wrong");
+
+  if (quizState.mode === "vi2en") {
+    const cur = quizState.queue[0];
+    document.getElementById("quizTermPron").textContent =
+      cur.pronunciation || "";
+    addQuizSpeak(cur);
+  }
 
   // Khóa 3 nút X/O/V lại — lựa chọn đã chốt tại thời điểm bấm đáp án.
   document

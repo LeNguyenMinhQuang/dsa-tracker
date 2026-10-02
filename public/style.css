@@ -1313,6 +1313,13 @@ label,
   text-transform: uppercase;
   word-break: break-word;
 }
+/* Chế độ hiện nghĩa tiếng Việt: chữ nhỏ hơn, không viết hoa toàn bộ cho dễ đọc */
+.quiz-term.quiz-term-vi {
+  font-size: clamp(1.4rem, 6vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
 .quiz-term-pron {
   margin-top: -6px;
   min-height: 1em;

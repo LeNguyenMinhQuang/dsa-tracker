@@ -345,6 +345,17 @@
           >
         </label>
       </div>
+      <span class="field-label-inline">Chế độ hiển thị</span>
+      <div class="test-setup-options" id="quizSetupModeRadios">
+        <label class="test-setup-option">
+          <input type="radio" name="quizSetupMode" value="en2vi" checked />
+          <span>Hiện từ tiếng Anh → chọn nghĩa tiếng Việt</span>
+        </label>
+        <label class="test-setup-option">
+          <input type="radio" name="quizSetupMode" value="vi2en" />
+          <span>Hiện nghĩa tiếng Việt → chọn từ tiếng Anh</span>
+        </label>
+      </div>
       <span class="field-label-inline">Số lượng từ muốn test</span>
       <input type="number" id="quizSetupCount" min="1" value="10" />
       <p class="import-help" id="quizSetupHint"></p>
@@ -354,7 +365,7 @@
       </div>
     </div>
 
-    <!-- Quiz stage: multiple choice (từ tiếng Anh -> chọn đúng nghĩa tiếng Việt) -->
+    <!-- Quiz stage: multiple choice (EN -> VI hoặc VI -> EN tùy chế độ đã chọn) -->
     <div class="overlay" id="quizOverlay"></div>
     <div class="test-stage" id="quizStage">
       <div class="test-header">
