@@ -1492,7 +1492,8 @@ function closeTestMode() {
 // trạng thái known/review/unsure của từ. Nó chỉ là một vòng luyện tập:
 // - Chọn 1 trong 3 nhóm (chưa nhớ / kiểm tra lại / đã biết) + số lượng từ.
 // - Có 2 chế độ: en2vi (hiện từ tiếng Anh + 4 nghĩa tiếng Việt) và
-//   vi2en (hiện nghĩa tiếng Việt + 4 từ tiếng Anh). Luôn 1 đúng, 3 lấy random từ các từ khác.
+//   vi2en (hiện nghĩa tiếng Việt + 4 từ tiếng Anh), listen2en (nghe + 4 từ tiếng Anh),
+//   listen2vi (nghe + 4 nghĩa tiếng Việt). Luôn 1 đúng, 3 lấy random từ các từ khác.
 // - Trả lời đúng -> từ bị loại khỏi hàng đợi (không đổi trạng thái).
 // - Trả lời sai -> từ được chèn lại vào hàng đợi ở một vị trí ngẫu nhiên để hỏi lại.
 const quizState = {
@@ -1500,8 +1501,14 @@ const quizState = {
   total: 0,
   mistakes: 0,
   selectedStatusChange: "",
-  mode: "en2vi", // "en2vi": hiện từ Anh, chọn nghĩa Việt | "vi2en": hiện nghĩa Việt, chọn từ Anh
+  // "en2vi": hiện từ Anh, chọn nghĩa Việt | "vi2en": hiện nghĩa Việt, chọn từ Anh
+  // "listen2en": nghe, chọn từ Anh      | "listen2vi": nghe, chọn nghĩa Việt
+  mode: "en2vi",
 };
+
+// Đáp án là từ tiếng Anh (true) hay nghĩa tiếng Việt (false) theo từng chế độ.
+const quizOptionsAreTerms = (mode) => mode === "vi2en" || mode === "listen2en";
+const quizIsListening = (mode) => mode === "listen2en" || mode === "listen2vi";
 
 function openQuizSetup() {
   document.getElementById("quizSetupUnsureCount").textContent = poolFor([
@@ -1615,8 +1622,8 @@ function buildQuizQuestion() {
   const correctDef = defOf(w) || "(không có nghĩa)";
 
   let options;
-  if (quizState.mode === "vi2en") {
-    // Hiện nghĩa tiếng Việt -> 4 đáp án là từ tiếng Anh (1 đúng + 3 random từ khác).
+  if (quizOptionsAreTerms(quizState.mode)) {
+    // Đáp án là từ tiếng Anh (vi2en / listen2en) (1 đúng + 3 random từ khác).
     // Loại các từ trùng term với đáp án đúng / trùng nhau để không có 2 đáp án giống hệt.
     const seen = new Set([w.term.trim().toLowerCase()]);
     const others = shuffle(vocab.words.filter((x) => x.id !== w.id)).filter(
@@ -1645,16 +1652,26 @@ function buildQuizQuestion() {
 }
 
 function renderQuizQuestion(w, options, correctDef) {
-  const isViToEn = quizState.mode === "vi2en";
+  const mode = quizState.mode;
+  const isViToEn = mode === "vi2en";
+  const isListen = quizIsListening(mode);
   document.getElementById("quizProgress").textContent =
     `${quizState.total - quizState.queue.length + 1} / ${quizState.total}`;
 
   const termEl = document.getElementById("quizTerm");
   const pronEl = document.getElementById("quizTermPron");
-  termEl.classList.toggle("quiz-term-vi", isViToEn);
-  // vi2en: ẩn phiên âm + nút phát âm lúc đang hỏi vì sẽ lộ đáp án; hiện lại sau khi trả lời.
-  termEl.textContent = isViToEn ? correctDef : w.term;
-  pronEl.textContent = isViToEn ? "" : w.pronunciation || "";
+  termEl.classList.toggle("quiz-term-vi", isViToEn || isListen);
+  // vi2en / nghe: ẩn từ + phiên âm lúc đang hỏi vì sẽ lộ đáp án; hiện lại sau khi trả lời.
+  if (isListen) {
+    termEl.textContent = "🔊 Nghe và chọn đáp án";
+    pronEl.textContent = "";
+  } else if (isViToEn) {
+    termEl.textContent = correctDef;
+    pronEl.textContent = "";
+  } else {
+    termEl.textContent = w.term;
+    pronEl.textContent = w.pronunciation || "";
+  }
 
   const optWrap = document.getElementById("quizOptions");
   optWrap.innerHTML = "";
@@ -1671,7 +1688,9 @@ function renderQuizQuestion(w, options, correctDef) {
   });
 
   termEl.parentNode.querySelector(".quiz-speak")?.remove();
+  // Chế độ nghe: luôn có nút UK/US để nghe lại + tự phát một lần khi hiện câu hỏi.
   if (!isViToEn) addQuizSpeak(w);
+  if (isListen) speak(w.term, "en-US");
 }
 
 function addQuizSpeak(w) {
@@ -1708,11 +1727,15 @@ function handleQuizAnswer(isCorrect, clickedBtn, optWrap) {
   });
   if (!isCorrect) clickedBtn.classList.add("wrong");
 
-  if (quizState.mode === "vi2en") {
+  if (quizState.mode === "vi2en" || quizIsListening(quizState.mode)) {
     const cur = quizState.queue[0];
+    if (quizIsListening(quizState.mode)) {
+      // Lộ từ sau khi trả lời để người học đối chiếu mặt chữ với âm vừa nghe.
+      document.getElementById("quizTerm").textContent = cur.term;
+    }
     document.getElementById("quizTermPron").textContent =
       cur.pronunciation || "";
-    addQuizSpeak(cur);
+    if (quizState.mode === "vi2en") addQuizSpeak(cur);
   }
 
   // Khóa 3 nút X/O/V lại — lựa chọn đã chốt tại thời điểm bấm đáp án.
