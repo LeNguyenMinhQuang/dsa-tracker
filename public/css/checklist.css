@@ -1,0 +1,136 @@
+.checklist-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.checklist-toolbar .btn {
+  flex: none;
+}
+.checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  border-top: 2px solid var(--ink);
+  border-left: 2px solid var(--ink);
+}
+.checklist-card {
+  padding: 14px;
+  background: var(--sheet);
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  cursor: pointer;
+}
+.checklist-card:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.checklist-card-name {
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+.checklist-card-meta {
+  margin: 4px 0 12px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.checklist-progress-track {
+  height: 12px;
+  border: 2px solid currentColor;
+}
+.checklist-progress-fill {
+  height: 100%;
+  background: currentColor;
+}
+.checklist-items-empty {
+  padding: 12px 0;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.checklist-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ink);
+}
+.checklist-item-row:last-child {
+  border-bottom: 0;
+}
+.checklist-check {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.checklist-check input {
+  width: 20px;
+  height: 20px;
+}
+.checklist-item-text {
+  word-break: break-word;
+}
+.checklist-item-text.done {
+  text-decoration: line-through;
+  text-decoration-color: var(--red);
+  text-decoration-thickness: 2px;
+  opacity: 0.6;
+}
+.checklist-item-remove {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  background: transparent;
+  border: 2px solid var(--ink);
+  cursor: pointer;
+}
+.checklist-item-remove:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.checklist-add-item-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.checklist-add-item-row input {
+  flex: 1;
+}
+.checklist-add-item-row .btn {
+  flex: none;
+}
+.import-file-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.import-file-row .btn {
+  flex: none;
+}
+.import-textarea {
+  min-height: 220px;
+  font-size: 12px;
+}
+.import-error {
+  min-height: 1.2em;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--red);
+}

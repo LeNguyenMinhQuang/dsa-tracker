@@ -1,0 +1,63 @@
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+/* SWISS INDUSTRIAL PRINT — newspaper aesthetic, sharp edges, high contrast */
+:root {
+  --paper: #eae8e3;
+  --sheet: #f4f4f0;
+  --hover: #dad8d2;
+  --ink: #111111;
+  --mute: #5a5a55;
+  --red: #e61919;
+  --head: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", "IBM Plex Mono", "Courier New", monospace;
+  --dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Ccircle cx='1.5' cy='1.5' r='1' fill='%23111'/%3E%3C/svg%3E");
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0h12L6 8z' fill='%23111'/%3E%3C/svg%3E");
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.4;
+  min-height: 100vh;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: var(--noise);
+  opacity: 0.07;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 100;
+}
+
+:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}
+button {
+  font-family: var(--mono);
+  color: inherit;
+}
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 20px 64px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

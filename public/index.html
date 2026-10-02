@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DSA Tracker</title>
+    <title>DSA & Vocabulary Tracker</title>
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2311151C%22/><text x=%2250%22 y=%2266%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22%235B8CFF%22 font-family=%22monospace%22>&lt;/&gt;</text></svg>"
@@ -12,11 +12,11 @@
   </head>
 
   <body>
-    <!-- Màn chọn người dùng: chỉ hiện khi body có class "picking" -->
+    <!-- User selection screen: displayed when body has "picking" class -->
     <section class="user-screen" id="userScreen">
       <div class="user-wrap">
         <h1 class="macro">USER<span class="reg">®</span></h1>
-        <p class="brand-sub">Bấm vào tên để vào / không cần mật khẩu</p>
+        <p class="brand-sub">Select a user profile to continue</p>
         <div class="stripe" aria-hidden="true"></div>
         <div class="user-list" id="userList"></div>
         <div class="import-error" id="userError"></div>
@@ -27,18 +27,18 @@
       <header class="topbar">
         <div class="brand">
           <h1 class="macro">DSA<span class="reg">®</span></h1>
-          <p class="brand-sub">Tracker / lịch luyện thuật toán</p>
+          <p class="brand-sub">DSA & Vocabulary Tracker</p>
         </div>
         <div class="topbar-meta">
           <span class="barcode" aria-hidden="true"></span>
           <span id="userLabel">USER / —</span>
-          <span>REV 2.7</span>
+          <span>REV 3.0</span>
           <div class="meta-actions">
-            <button class="icon-btn" id="switchUserBtn" title="Đổi người dùng">
-              [ Đổi user ]
+            <button class="icon-btn" id="switchUserBtn" title="Switch User Profile">
+              [ Switch User ]
             </button>
-            <button class="icon-btn" id="settingsBtn" title="Cài đặt">
-              [ Cài đặt ]
+            <button class="icon-btn" id="settingsBtn" title="Settings">
+              [ Settings ]
             </button>
           </div>
         </div>
@@ -47,13 +47,13 @@
 
       <nav class="tabs">
         <button class="tab-btn active" id="tabBtnDsa" data-tab="dsa">
-          Lịch DSA
+          DSA Schedule
         </button>
         <button class="tab-btn" id="tabBtnVocab" data-tab="vocab">
-          Từ vựng
+          Vocabulary
         </button>
         <button class="tab-btn" id="tabBtnChecklist" data-tab="checklist">
-          Checklist
+          Checklists
         </button>
       </nav>
 
@@ -66,23 +66,23 @@
               <button class="nav-btn" id="nextMonth">›</button>
             </div>
             <div class="weekday-row">
-              <span>T2</span><span>T3</span><span>T4</span><span>T5</span
-              ><span>T6</span><span>T7</span><span>CN</span>
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span
+              ><span>Fri</span><span>Sat</span><span>Sun</span>
             </div>
             <div class="calendar-grid" id="calendarGrid"></div>
             <div class="legend">
               <span class="legend-item"
-                ><i class="dot complete"></i> Hoàn thành</span
+                ><i class="dot complete"></i> Completed</span
               >
               <span class="legend-item"
-                ><i class="dot incomplete"></i> Chưa xong</span
+                ><i class="dot incomplete"></i> Incomplete</span
               >
-              <span class="legend-item"><i class="dot today"></i> Hôm nay</span>
-              <span class="legend-item"><i class="dot diff-easy"></i> Dễ</span>
+              <span class="legend-item"><i class="dot today"></i> Today</span>
+              <span class="legend-item"><i class="dot diff-easy"></i> Easy</span>
               <span class="legend-item"
-                ><i class="dot diff-medium"></i> T.bình</span
+                ><i class="dot diff-medium"></i> Medium</span
               >
-              <span class="legend-item"><i class="dot diff-hard"></i> Khó</span>
+              <span class="legend-item"><i class="dot diff-hard"></i> Hard</span>
             </div>
           </section>
         </section>
@@ -94,30 +94,30 @@
               <input
                 type="text"
                 id="vocabSearch"
-                placeholder="Tìm từ, nghĩa hoặc chủ đề..."
+                placeholder="Search word, definition, or topic..."
               />
             </div>
             <div class="vocab-filters" id="vocabFilters">
-              <button class="chip active" data-filter="all">Tất cả</button>
-              <button class="chip" data-filter="known">Đã biết</button>
-              <button class="chip" data-filter="review">Kiểm tra lại</button>
-              <button class="chip" data-filter="unsure">Chưa nhớ</button>
+              <button class="chip active" data-filter="all">All</button>
+              <button class="chip" data-filter="known">Mastered</button>
+              <button class="chip" data-filter="review">Review</button>
+              <button class="chip" data-filter="unsure">Learning</button>
             </div>
           </div>
           <div class="vocab-toolbar-row2">
             <select class="group-select" id="vocabGroupFilter">
-              <option value="">Tất cả chủ đề</option>
+              <option value="">All Topics</option>
             </select>
           </div>
           <div class="vocab-actions">
-            <button class="btn btn-secondary" id="addWordBtn">+ Thêm từ</button>
+            <button class="btn btn-secondary" id="addWordBtn">+ Add Word</button>
             <button class="btn btn-primary" id="testModeBtn">
-              Kiểm tra <span class="badge-count" id="unsureCount">0</span>
+              Flashcards <span class="badge-count" id="unsureCount">0</span>
             </button>
             <button class="btn btn-secondary" id="quizModeBtn">
-              Test trắc nghiệm
+              Quiz Mode
             </button>
-            <button class="btn btn-secondary" id="discoverBtn">Discover</button>
+            <button class="btn btn-secondary" id="discoverBtn">Discover Words</button>
           </div>
 
           <div class="vocab-stats" id="vocabStats"></div>
@@ -125,8 +125,7 @@
           <div class="word-list" id="wordList"></div>
           <div class="empty-state" id="wordEmpty" style="display: none">
             <p>
-              Chưa có từ nào. Bấm "+ Thêm từ" để bắt đầu xây kho từ vựng của
-              bạn.
+              No words added yet. Click "+ Add Word" or "Discover Words" to build your vocabulary.
             </p>
           </div>
         </section>
@@ -134,17 +133,16 @@
         <section class="tab-panel" id="tab-checklist">
           <div class="checklist-toolbar">
             <button class="btn btn-secondary" id="newChecklistBtn">
-              + Tạo checklist
+              + New Checklist
             </button>
             <button class="btn btn-ghost" id="importChecklistBtn">
-              Nhập JSON
+              Import JSON
             </button>
           </div>
           <div class="checklist-grid" id="checklistGrid"></div>
           <div class="empty-state" id="checklistEmpty" style="display: none">
             <p>
-              Chưa có checklist nào. Bấm "+ Tạo checklist" để tạo thủ công, hoặc
-              "Nhập JSON" để import.
+              No checklists found. Click "+ New Checklist" to create manually, or "Import JSON" to import existing ones.
             </p>
           </div>
         </section>
@@ -161,22 +159,19 @@
         </div>
         <button class="icon-btn" id="closePanel">✕</button>
       </div>
-
-      <!-- Nội dung bên dưới (bài mới / ôn lại / random) được sinh động bằng JS,
-         vì số lượng thẻ phụ thuộc vào Cài đặt và có thể thay đổi theo từng ngày. -->
       <div class="panel-body" id="panelBody"></div>
     </aside>
 
     <!-- Settings modal -->
     <div class="overlay" id="settingsOverlay"></div>
     <div class="modal modal-wide" id="settingsModal">
-      <h2>Cài đặt</h2>
+      <h2>Settings</h2>
 
-      <label>Số bài mới mỗi ngày</label>
+      <label>New problems per day</label>
       <input type="number" id="newCountInput" min="0" value="1" />
 
       <span class="field-label-inline"
-        >Các vòng ôn tập (mỗi vòng ôn lại bài đã tạo N ngày trước)</span
+        >Review intervals (days after initial completion)</span
       >
       <div class="review-intervals-list" id="reviewIntervalsList"></div>
       <button
@@ -184,60 +179,59 @@
         class="btn btn-ghost btn-block"
         id="addReviewInterval"
       >
-        + Thêm vòng ôn tập
+        + Add Review Interval
       </button>
 
-      <span class="field-label-inline">Số bài ngẫu nhiên mỗi ngày</span>
+      <span class="field-label-inline">Random practice problems per day</span>
       <input type="number" id="randomCountInput" min="0" value="1" />
 
       <div class="task-actions">
-        <button class="btn btn-secondary" id="settingsCancel">Đóng</button>
-        <button class="btn btn-primary" id="settingsSave">Lưu</button>
+        <button class="btn btn-secondary" id="settingsCancel">Close</button>
+        <button class="btn btn-primary" id="settingsSave">Save Settings</button>
       </div>
       <p class="import-help">
-        Thay đổi ở đây chỉ áp dụng cho những ngày chưa từng mở trước đó — các
-        ngày đã có dữ liệu sẽ giữ nguyên số lượng cũ.
+        Settings changes apply to new/unopened days. Past daily logs are preserved.
       </p>
     </div>
 
-    <!-- Add user modal (màn chọn người dùng) -->
+    <!-- Add user modal -->
     <div class="overlay" id="userOverlay"></div>
     <div class="modal" id="userModal">
-      <h2>Thêm người dùng</h2>
-      <label>Tên</label>
+      <h2>Add User Profile</h2>
+      <label>Profile Name</label>
       <input
         type="text"
         id="newUserName"
         maxlength="30"
-        placeholder="VD: Lan"
+        placeholder="e.g. Alex"
       />
       <div class="import-error" id="newUserError"></div>
       <div class="task-actions">
-        <button class="btn btn-secondary" id="userCancel">Hủy</button>
-        <button class="btn btn-primary" id="userCreate">Tạo</button>
+        <button class="btn btn-secondary" id="userCancel">Cancel</button>
+        <button class="btn btn-primary" id="userCreate">Create</button>
       </div>
     </div>
 
     <!-- Add/Edit word modal -->
     <div class="overlay" id="wordOverlay"></div>
     <div class="modal modal-wide" id="wordModal">
-      <h2 id="wordModalTitle">Thêm từ mới</h2>
-      <label>Từ / cụm từ</label>
-      <input type="text" id="wordTermInput" placeholder="VD: run" />
-      <span class="field-label-inline">Phiên âm (tuỳ chọn)</span>
-      <input type="text" id="wordPronInput" placeholder="VD: /rʌn/" />
-      <span class="field-label-inline">Chủ đề (tuỳ chọn)</span>
+      <h2 id="wordModalTitle">Add New Word</h2>
+      <label>Word / Phrase</label>
+      <input type="text" id="wordTermInput" placeholder="e.g. execute" />
+      <span class="field-label-inline">Phonetic / Pronunciation (optional)</span>
+      <input type="text" id="wordPronInput" placeholder="e.g. /ˈɛk.sə.kjuːt/" />
+      <span class="field-label-inline">Topic / Group (optional)</span>
       <select class="group-select" id="wordGroupInput">
-        <option value="">Không thuộc chủ đề nào</option>
+        <option value="">Uncategorized</option>
       </select>
-      <label>Nghĩa</label>
+      <label>Meanings</label>
       <div class="meanings-list" id="meaningsList"></div>
       <button type="button" class="btn btn-ghost btn-block" id="addMeaningRow">
-        + Thêm nghĩa khác
+        + Add Another Meaning
       </button>
       <div class="task-actions">
-        <button class="btn btn-secondary" id="wordCancel">Hủy</button>
-        <button class="btn btn-primary" id="wordSave">Lưu</button>
+        <button class="btn btn-secondary" id="wordCancel">Cancel</button>
+        <button class="btn btn-primary" id="wordSave">Save</button>
       </div>
       <button
         type="button"
@@ -245,45 +239,45 @@
         id="wordDelete"
         style="display: none"
       >
-        Xóa từ này
+        Delete Word
       </button>
     </div>
 
-    <!-- Test setup modal: choose which pools (chưa nhớ / kiểm tra lại / đã biết) to include -->
+    <!-- Test setup modal -->
     <div class="overlay" id="testSetupOverlay"></div>
     <div class="modal" id="testSetupModal">
-      <h2>Chọn từ để kiểm tra</h2>
+      <h2>Flashcard Practice Setup</h2>
       <div class="test-setup-options">
         <label class="test-setup-option">
           <input type="checkbox" id="testSetupUnsure" />
           <span
-            >Chưa nhớ
+            >Learning
             <span class="badge-count" id="testSetupUnsureCount">0</span></span
           >
         </label>
         <label class="test-setup-option">
           <input type="checkbox" id="testSetupReview" />
           <span
-            >Kiểm tra lại
+            >Review
             <span class="badge-count" id="testSetupReviewCount">0</span></span
           >
         </label>
         <label class="test-setup-option">
           <input type="checkbox" id="testSetupKnown" />
           <span
-            >Đã biết
+            >Mastered
             <span class="badge-count" id="testSetupKnownCount">0</span></span
           >
         </label>
       </div>
       <p class="import-help" id="testSetupHint"></p>
       <div class="task-actions">
-        <button class="btn btn-secondary" id="testSetupCancel">Hủy</button>
-        <button class="btn btn-primary" id="testSetupStart">Bắt đầu</button>
+        <button class="btn btn-secondary" id="testSetupCancel">Cancel</button>
+        <button class="btn btn-primary" id="testSetupStart">Start Practice</button>
       </div>
     </div>
 
-    <!-- Test / flashcard modal -->
+    <!-- Flashcard test modal -->
     <div class="overlay" id="testOverlay"></div>
     <div class="test-stage" id="testStage">
       <div class="test-header">
@@ -295,7 +289,7 @@
           <div class="flashcard-inner" id="flashcardInner">
             <div class="flashcard-face flashcard-front">
               <div class="fc-term" id="fcTerm">word</div>
-              <div class="fc-hint">&gt;&gt;&gt; Bấm để lật thẻ</div>
+              <div class="fc-hint">&gt;&gt;&gt; Tap card to flip</div>
             </div>
             <div class="flashcard-face flashcard-back">
               <div class="fc-term-small" id="fcTermSmall">word</div>
@@ -305,24 +299,24 @@
         </div>
       </div>
       <div class="test-actions" id="testActions">
-        <button class="btn btn-danger" id="testStillUnsure">Chưa nhớ</button>
-        <button class="btn btn-review" id="testReview">Kiểm tra lại</button>
-        <button class="btn btn-success" id="testKnown">Đã nhớ</button>
+        <button class="btn btn-danger" id="testStillUnsure">Needs Work</button>
+        <button class="btn btn-review" id="testReview">Review Later</button>
+        <button class="btn btn-success" id="testKnown">Got It</button>
       </div>
       <div class="test-done" id="testDone" style="display: none">
-        <div class="test-done-title">[ Hoàn thành ]</div>
+        <div class="test-done-title">[ Completed ]</div>
         <p id="testDoneSummary"></p>
         <button class="btn btn-primary btn-block" id="testDoneClose">
-          Đóng
+          Close
         </button>
       </div>
     </div>
 
-    <!-- Discover: 10 từ mới (chưa có trong database) dạng flashcard -->
+    <!-- Discover Modal -->
     <div class="overlay" id="discoverOverlay"></div>
     <div class="test-stage" id="discoverStage">
       <div class="test-header">
-        <div class="test-progress" id="discoverProgress">Discover</div>
+        <div class="test-progress" id="discoverProgress">Discover Words</div>
         <button class="icon-btn" id="discoverClose">✕</button>
       </div>
       <div class="discover-msg" id="discoverMsg"></div>
@@ -332,7 +326,7 @@
             <div class="flashcard-face flashcard-front">
               <div class="fc-term" id="dcTerm">word</div>
               <div class="quiz-term-pron" id="dcPron"></div>
-              <div class="fc-hint">&gt;&gt;&gt; Bấm để lật thẻ</div>
+              <div class="fc-hint">&gt;&gt;&gt; Tap card to flip</div>
             </div>
             <div class="flashcard-face flashcard-back">
               <div class="fc-term-small" id="dcTermSmall">word</div>
@@ -343,7 +337,7 @@
       </div>
       <div id="discoverControls" style="display: none">
         <div class="quiz-status-hint">
-          Thêm từ này vào kho từ? (chọn rồi bấm 1 trong 3 nút bên dưới)
+          Save this word to your vocabulary list?
         </div>
         <div class="discover-add-seg" id="discoverAddSeg">
           <button
@@ -351,93 +345,93 @@
             class="discover-add-btn discover-add-no"
             data-add="0"
           >
-            ✕ Không thêm
+            ✕ Skip
           </button>
           <button
             type="button"
             class="discover-add-btn discover-add-yes active"
             data-add="1"
           >
-            ✓ Thêm
+            ✓ Save
           </button>
         </div>
         <div class="test-actions">
-          <button class="btn btn-danger" id="discoverUnsure">Chưa nhớ</button>
+          <button class="btn btn-danger" id="discoverUnsure">Needs Work</button>
           <button class="btn btn-review" id="discoverReview">
-            Kiểm tra lại
+            Review Later
           </button>
-          <button class="btn btn-success" id="discoverKnown">Đã biết</button>
+          <button class="btn btn-success" id="discoverKnown">Mastered</button>
         </div>
       </div>
       <div class="test-done" id="discoverDone" style="display: none">
-        <div class="test-done-title">[ Hoàn thành ]</div>
+        <div class="test-done-title">[ Completed ]</div>
         <p id="discoverDoneSummary"></p>
         <div class="task-actions">
-          <button class="btn btn-secondary" id="discoverDoneClose">Đóng</button>
+          <button class="btn btn-secondary" id="discoverDoneClose">Close</button>
           <button class="btn btn-primary" id="discoverMore">
-            Discover thêm
+            Discover More
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Quiz setup modal: choose ONE status set + how many words -->
+    <!-- Quiz setup modal -->
     <div class="overlay" id="quizSetupOverlay"></div>
     <div class="modal" id="quizSetupModal">
-      <h2>Test trắc nghiệm</h2>
-      <span class="field-label-inline">Chọn 1 nhóm từ để test</span>
+      <h2>Multiple-Choice Quiz</h2>
+      <span class="field-label-inline">Select Word Pool</span>
       <div class="test-setup-options" id="quizSetupRadios">
         <label class="test-setup-option">
           <input type="radio" name="quizSetupStatus" value="unsure" checked />
           <span
-            >Chưa nhớ
+            >Learning
             <span class="badge-count" id="quizSetupUnsureCount">0</span></span
           >
         </label>
         <label class="test-setup-option">
           <input type="radio" name="quizSetupStatus" value="review" />
           <span
-            >Kiểm tra lại
+            >Review
             <span class="badge-count" id="quizSetupReviewCount">0</span></span
           >
         </label>
         <label class="test-setup-option">
           <input type="radio" name="quizSetupStatus" value="known" />
           <span
-            >Đã biết
+            >Mastered
             <span class="badge-count" id="quizSetupKnownCount">0</span></span
           >
         </label>
       </div>
-      <span class="field-label-inline">Chế độ hiển thị</span>
+      <span class="field-label-inline">Quiz Mode</span>
       <div class="test-setup-options" id="quizSetupModeRadios">
         <label class="test-setup-option">
           <input type="radio" name="quizSetupMode" value="en2vi" checked />
-          <span>Hiện từ tiếng Anh → chọn nghĩa tiếng Việt</span>
+          <span>English Word → Select Definition</span>
         </label>
         <label class="test-setup-option">
           <input type="radio" name="quizSetupMode" value="vi2en" />
-          <span>Hiện nghĩa tiếng Việt → chọn từ tiếng Anh</span>
+          <span>Definition → Select English Word</span>
         </label>
         <label class="test-setup-option">
           <input type="radio" name="quizSetupMode" value="listen2en" />
-          <span>Nghe phát âm → chọn từ tiếng Anh</span>
+          <span>Listen Audio → Select English Word</span>
         </label>
         <label class="test-setup-option">
           <input type="radio" name="quizSetupMode" value="listen2vi" />
-          <span>Nghe phát âm → chọn nghĩa tiếng Việt</span>
+          <span>Listen Audio → Select Definition</span>
         </label>
       </div>
-      <span class="field-label-inline">Số lượng từ muốn test</span>
+      <span class="field-label-inline">Number of Words</span>
       <input type="number" id="quizSetupCount" min="1" value="10" />
       <p class="import-help" id="quizSetupHint"></p>
       <div class="task-actions">
-        <button class="btn btn-secondary" id="quizSetupCancel">Hủy</button>
-        <button class="btn btn-primary" id="quizSetupStart">Bắt đầu</button>
+        <button class="btn btn-secondary" id="quizSetupCancel">Cancel</button>
+        <button class="btn btn-primary" id="quizSetupStart">Start Quiz</button>
       </div>
     </div>
 
-    <!-- Quiz stage: multiple choice (EN -> VI hoặc VI -> EN tùy chế độ đã chọn) -->
+    <!-- Quiz stage -->
     <div class="overlay" id="quizOverlay"></div>
     <div class="test-stage" id="quizStage">
       <div class="test-header">
@@ -448,14 +442,14 @@
         <div class="quiz-term" id="quizTerm">word</div>
         <div class="quiz-term-pron" id="quizTermPron"></div>
         <div class="quiz-status-hint">
-          Nếu trả lời đúng, chuyển từ này thành:
+          Update word status on correct answer:
         </div>
         <div class="quiz-status-seg" id="quizStatusSeg">
           <button
             type="button"
             class="quiz-status-btn quiz-status-unsure"
             data-status="unsure"
-            title="Chưa nhớ"
+            title="Mark as Learning"
           >
             X
           </button>
@@ -463,7 +457,7 @@
             type="button"
             class="quiz-status-btn quiz-status-keep active"
             data-status=""
-            title="Giữ nguyên trạng thái hiện tại"
+            title="Keep current status"
           >
             O
           </button>
@@ -471,7 +465,7 @@
             type="button"
             class="quiz-status-btn quiz-status-known"
             data-status="known"
-            title="Đã biết"
+            title="Mark as Mastered"
           >
             V
           </button>
@@ -479,10 +473,10 @@
         <div class="quiz-options" id="quizOptions"></div>
       </div>
       <div class="test-done" id="quizDone" style="display: none">
-        <div class="test-done-title">[ Hoàn thành ]</div>
+        <div class="test-done-title">[ Completed ]</div>
         <p id="quizDoneSummary"></p>
         <button class="btn btn-primary btn-block" id="quizDoneClose">
-          Đóng
+          Close
         </button>
       </div>
     </div>
@@ -490,31 +484,30 @@
     <!-- New checklist modal -->
     <div class="overlay" id="checklistOverlay"></div>
     <div class="modal" id="checklistModal">
-      <h2>Tạo checklist mới</h2>
-      <label>Tên checklist</label>
+      <h2>Create New Checklist</h2>
+      <label>Checklist Name</label>
       <input
         type="text"
         id="newChecklistName"
-        placeholder="VD: Chuẩn bị phỏng vấn"
+        placeholder="e.g. Interview Prep"
       />
       <div class="task-actions">
-        <button class="btn btn-secondary" id="checklistCancel">Hủy</button>
-        <button class="btn btn-primary" id="checklistCreate">Tạo</button>
+        <button class="btn btn-secondary" id="checklistCancel">Cancel</button>
+        <button class="btn btn-primary" id="checklistCreate">Create</button>
       </div>
     </div>
 
     <!-- Import JSON modal -->
     <div class="overlay" id="importOverlay"></div>
     <div class="modal modal-wide" id="importModal">
-      <h2>Nhập checklist từ JSON</h2>
+      <h2>Import Checklist from JSON</h2>
       <p class="import-help">
-        Dán JSON dạng
+        Paste JSON formatted as
         <code
           >{ "name": "...", "items": [{ "text": "...", "checked": false }]
           }</code
         >
-        hoặc chọn file <code>.json</code> bên dưới. Có thể nhập nhiều checklist
-        cùng lúc bằng <code>{ "checklists": [ {...}, {...} ] }</code>.
+        or select a <code>.json</code> file below. You can import multiple checklists at once using <code>{ "checklists": [ {...}, {...} ] }</code>.
       </p>
       <div class="import-file-row">
         <input
@@ -528,18 +521,18 @@
           id="useSampleBtn"
           onclick="useSampleJson()"
         >
-          Dùng JSON mẫu
+          Use Sample JSON
         </button>
       </div>
       <textarea
         class="import-textarea"
         id="importTextarea"
-        placeholder='{"name":"Tên checklist","items":[{"text":"Mục 1","checked":false}]}'
+        placeholder='{"name":"Checklist Name","items":[{"text":"Item 1","checked":false}]}'
       ></textarea>
       <div class="import-error" id="importError"></div>
       <div class="task-actions">
-        <button class="btn btn-secondary" id="importCancel">Hủy</button>
-        <button class="btn btn-primary" id="importSubmit">Nhập</button>
+        <button class="btn btn-secondary" id="importCancel">Cancel</button>
+        <button class="btn btn-primary" id="importSubmit">Import</button>
       </div>
     </div>
 
@@ -556,8 +549,8 @@
       <div class="panel-body">
         <div class="checklist-items" id="checklistItems"></div>
         <div class="checklist-add-item-row">
-          <input type="text" id="newItemInput" placeholder="Thêm mục mới..." />
-          <button class="btn btn-secondary" id="addItemBtn">+ Thêm</button>
+          <input type="text" id="newItemInput" placeholder="Add new item..." />
+          <button class="btn btn-secondary" id="addItemBtn">+ Add Item</button>
         </div>
         <button
           type="button"
@@ -565,11 +558,22 @@
           id="checklistDelete"
           style="margin-top: 20px"
         >
-          Xóa checklist này
+          Delete Checklist
         </button>
       </div>
     </aside>
 
+    <!-- Client JS Modules -->
+    <script src="js/config.js"></script>
+    <script src="js/users.js"></script>
+    <script src="js/tabs.js"></script>
+    <script src="js/dsa.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/vocab.js"></script>
+    <script src="js/flashcards.js"></script>
+    <script src="js/discover.js"></script>
+    <script src="js/quiz.js"></script>
+    <script src="js/checklist.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

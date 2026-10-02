@@ -1,0 +1,311 @@
+.test-stage {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  width: min(600px, 94vw);
+  padding: 16px;
+  background: var(--sheet);
+  border: 3px solid var(--ink);
+  z-index: 40;
+}
+.test-stage.show {
+  display: block;
+}
+.test-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--ink);
+}
+.test-progress {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.test-progress::before {
+  content: "// ";
+  color: var(--red);
+}
+.test-body {
+  perspective: 1200px;
+  margin-bottom: 14px;
+}
+.flashcard {
+  height: 240px;
+  cursor: pointer;
+}
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.45s;
+  transform-style: preserve-3d;
+}
+.flashcard-inner.flipped {
+  transform: rotateY(180deg);
+}
+.flashcard-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  text-align: center;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  backface-visibility: hidden;
+}
+.flashcard-back {
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow-y: auto;
+  text-align: left;
+  background: var(--ink);
+  color: var(--paper);
+  transform: rotateY(180deg);
+}
+.flashcard-back .meaning-item {
+  border-left-color: var(--paper);
+}
+.flashcard-back .meaning-explain,
+.flashcard-back .meaning-example {
+  color: #c9c8c2;
+}
+.fc-term {
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: clamp(2rem, 9vw, 3rem);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+.fc-hint {
+  margin-top: 14px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.fc-term-small {
+  margin-bottom: 10px;
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.fc-meanings {
+  width: 100%;
+}
+.test-actions {
+  display: flex;
+  gap: 8px;
+}
+.test-actions .btn {
+  padding: 12px 4px;
+  font-size: 10px;
+}
+.test-actions .btn-review {
+  padding: 10px 2px;
+}
+.test-done {
+  padding: 8px 0;
+  text-align: center;
+}
+.test-done-title {
+  margin-bottom: 8px;
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: 1.6rem;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+.test-done p {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.test-setup-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+.test-setup-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.quiz-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.quiz-term {
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: clamp(2rem, 10vw, 3.2rem);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+.quiz-term.quiz-term-vi {
+  font-size: clamp(1.4rem, 6vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+.quiz-term-pron {
+  margin-top: -6px;
+  min-height: 1em;
+  font-size: 12px;
+  color: var(--mute);
+}
+.quiz-status-hint {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.quiz-status-seg {
+  display: flex;
+}
+.quiz-status-btn {
+  width: 44px;
+  height: 40px;
+  background: transparent;
+  border: 2px solid var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.quiz-status-btn + .quiz-status-btn {
+  margin-left: -2px;
+}
+.quiz-status-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+.quiz-status-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.quiz-status-unsure.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.quiz-status-keep.active {
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 3px var(--ink);
+}
+.quiz-status-known.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  counter-reset: opt;
+}
+.quiz-option-btn {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  background: var(--sheet);
+  border: 2px solid var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.quiz-option-btn + .quiz-option-btn {
+  margin-top: -2px;
+}
+.quiz-option-btn::before {
+  counter-increment: opt;
+  content: counter(opt, upper-alpha);
+  flex: none;
+  padding-right: 10px;
+  border-right: 2px solid currentColor;
+  font-weight: 700;
+}
+.quiz-option-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+.quiz-option-btn:disabled {
+  cursor: default;
+}
+.quiz-option-btn.correct {
+  background: var(--ink);
+  color: var(--paper);
+}
+.quiz-option-btn.wrong {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.discover-msg {
+  padding: 36px 8px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--mute);
+  word-break: break-word;
+}
+.discover-msg .btn {
+  display: block;
+  margin: 14px auto 0;
+  flex: none;
+  padding: 10px 18px;
+}
+#discoverControls .quiz-status-hint {
+  margin-bottom: 8px;
+}
+.discover-add-seg {
+  display: flex;
+  margin-bottom: 12px;
+}
+.discover-add-btn {
+  flex: 1;
+  height: 40px;
+  background: transparent;
+  border: 2px solid var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.discover-add-btn + .discover-add-btn {
+  margin-left: -2px;
+}
+.discover-add-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+.discover-add-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.discover-add-no.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.discover-add-yes.active {
+  background: var(--ink);
+  color: var(--paper);
+}

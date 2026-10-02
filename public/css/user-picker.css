@@ -1,0 +1,72 @@
+.user-screen {
+  display: none;
+}
+body.picking .user-screen {
+  display: block;
+}
+body.picking .app {
+  display: none;
+}
+.user-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 20px 64px;
+}
+.user-wrap .brand-sub {
+  margin-bottom: 14px;
+}
+.meta-actions {
+  display: flex;
+  gap: 6px;
+}
+.user-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  border-top: 2px solid var(--ink);
+  border-left: 2px solid var(--ink);
+}
+.user-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 130px;
+  padding: 14px;
+  text-align: left;
+  background: var(--sheet);
+  border: 0;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  cursor: pointer;
+}
+.user-card:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.user-card-name {
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+.user-card-meta {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.user-add {
+  background: transparent;
+}
+.user-add-plus {
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: 4rem;
+  line-height: 0.8;
+  color: var(--red);
+}
+#userError {
+  margin-top: 12px;
+}
