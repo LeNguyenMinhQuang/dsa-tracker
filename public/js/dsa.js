@@ -1,3 +1,9 @@
+const monthLabel = document.getElementById("monthLabel");
+const calendarGrid = document.getElementById("calendarGrid");
+const overlay = document.getElementById("overlay");
+const dayPanel = document.getElementById("dayPanel");
+const panelBody = document.getElementById("panelBody");
+
 const diffLabel = { easy: "Easy", medium: "Medium", hard: "Hard" };
 
 function shiftMonth(delta) {

@@ -37,6 +37,9 @@ function init() {
 
   initTabs();
   initVocab();
+  initFlashcards();
+  initDiscover();
+  initQuiz();
   initChecklist();
 }
 

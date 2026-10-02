@@ -6,6 +6,27 @@ const quizState = {
   mode: "en2vi",
 };
 
+function initQuiz() {
+  document.getElementById("quizModeBtn").addEventListener("click", openQuizSetup);
+  document.getElementById("quizSetupCancel").addEventListener("click", closeQuizSetup);
+  document.getElementById("quizSetupOverlay").addEventListener("click", closeQuizSetup);
+  document.getElementById("quizSetupStart").addEventListener("click", startQuizFromSetup);
+  document.querySelectorAll('input[name="quizSetupStatus"]').forEach((r) =>
+    r.addEventListener("change", updateQuizSetupHint)
+  );
+  document.getElementById("quizClose").addEventListener("click", closeQuizMode);
+  document.getElementById("quizOverlay").addEventListener("click", closeQuizMode);
+  document.getElementById("quizDoneClose").addEventListener("click", closeQuizMode);
+  document.querySelectorAll(".quiz-status-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      document.querySelectorAll(".quiz-status-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      quizState.selectedStatusChange = btn.dataset.status;
+    });
+  });
+}
+
 const quizOptionsAreTerms = (mode) => mode === "vi2en" || mode === "listen2en";
 const quizIsListening = (mode) => mode === "listen2en" || mode === "listen2vi";
 

@@ -1,5 +1,19 @@
 const testState = { queue: [], index: 0, known: 0, review: 0, stillUnsure: 0 };
 
+function initFlashcards() {
+  document.getElementById("testModeBtn").addEventListener("click", openTestSetup);
+  document.getElementById("testSetupCancel").addEventListener("click", closeTestSetup);
+  document.getElementById("testSetupOverlay").addEventListener("click", closeTestSetup);
+  document.getElementById("testSetupStart").addEventListener("click", startTestFromSetup);
+  document.getElementById("testClose").addEventListener("click", closeTestMode);
+  document.getElementById("testOverlay").addEventListener("click", closeTestMode);
+  document.getElementById("flashcard").addEventListener("click", flipCard);
+  document.getElementById("testKnown").addEventListener("click", () => answerCard("known"));
+  document.getElementById("testReview").addEventListener("click", () => answerCard("review"));
+  document.getElementById("testStillUnsure").addEventListener("click", () => answerCard("unsure"));
+  document.getElementById("testDoneClose").addEventListener("click", closeTestMode);
+}
+
 function poolFor(statuses) {
   return vocab.words.filter(
     (w) =>

@@ -7,6 +7,27 @@ const discoverState = {
   skipped: 0,
 };
 
+function initDiscover() {
+  document.getElementById("discoverBtn").addEventListener("click", openDiscover);
+  document.getElementById("discoverClose").addEventListener("click", closeDiscover);
+  document.getElementById("discoverOverlay").addEventListener("click", closeDiscover);
+  document.getElementById("discoverDoneClose").addEventListener("click", closeDiscover);
+  document.getElementById("discoverMore").addEventListener("click", openDiscover);
+  document.getElementById("discoverCard").addEventListener("click", () => {
+    document.getElementById("discoverCardInner").classList.toggle("flipped");
+  });
+  document.querySelectorAll(".discover-add-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (discoverState.busy) return;
+      discoverState.add = btn.dataset.add === "1";
+      syncDiscoverAddSeg();
+    });
+  });
+  document.getElementById("discoverUnsure").addEventListener("click", () => answerDiscover("unsure"));
+  document.getElementById("discoverReview").addEventListener("click", () => answerDiscover("review"));
+  document.getElementById("discoverKnown").addEventListener("click", () => answerDiscover("known"));
+}
+
 function discoverSkippedKey() {
   return `discoverSkipped:${(currentUser && currentUser.id) || "anon"}`;
 }
