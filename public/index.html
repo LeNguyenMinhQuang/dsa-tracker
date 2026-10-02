@@ -117,6 +117,7 @@
             <button class="btn btn-secondary" id="quizModeBtn">
               Test trắc nghiệm
             </button>
+            <button class="btn btn-secondary" id="discoverBtn">Discover</button>
           </div>
 
           <div class="vocab-stats" id="vocabStats"></div>
@@ -314,6 +315,69 @@
         <button class="btn btn-primary btn-block" id="testDoneClose">
           Đóng
         </button>
+      </div>
+    </div>
+
+    <!-- Discover: 10 từ mới (chưa có trong database) dạng flashcard -->
+    <div class="overlay" id="discoverOverlay"></div>
+    <div class="test-stage" id="discoverStage">
+      <div class="test-header">
+        <div class="test-progress" id="discoverProgress">Discover</div>
+        <button class="icon-btn" id="discoverClose">✕</button>
+      </div>
+      <div class="discover-msg" id="discoverMsg"></div>
+      <div class="test-body" id="discoverBody" style="display: none">
+        <div class="flashcard" id="discoverCard">
+          <div class="flashcard-inner" id="discoverCardInner">
+            <div class="flashcard-face flashcard-front">
+              <div class="fc-term" id="dcTerm">word</div>
+              <div class="quiz-term-pron" id="dcPron"></div>
+              <div class="fc-hint">&gt;&gt;&gt; Bấm để lật thẻ</div>
+            </div>
+            <div class="flashcard-face flashcard-back">
+              <div class="fc-term-small" id="dcTermSmall">word</div>
+              <div class="fc-meanings" id="dcMeanings"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="discoverControls" style="display: none">
+        <div class="quiz-status-hint">
+          Thêm từ này vào kho từ? (chọn rồi bấm 1 trong 3 nút bên dưới)
+        </div>
+        <div class="discover-add-seg" id="discoverAddSeg">
+          <button
+            type="button"
+            class="discover-add-btn discover-add-no"
+            data-add="0"
+          >
+            ✕ Không thêm
+          </button>
+          <button
+            type="button"
+            class="discover-add-btn discover-add-yes active"
+            data-add="1"
+          >
+            ✓ Thêm
+          </button>
+        </div>
+        <div class="test-actions">
+          <button class="btn btn-danger" id="discoverUnsure">Chưa nhớ</button>
+          <button class="btn btn-review" id="discoverReview">
+            Kiểm tra lại
+          </button>
+          <button class="btn btn-success" id="discoverKnown">Đã biết</button>
+        </div>
+      </div>
+      <div class="test-done" id="discoverDone" style="display: none">
+        <div class="test-done-title">[ Hoàn thành ]</div>
+        <p id="discoverDoneSummary"></p>
+        <div class="task-actions">
+          <button class="btn btn-secondary" id="discoverDoneClose">Đóng</button>
+          <button class="btn btn-primary" id="discoverMore">
+            Discover thêm
+          </button>
+        </div>
       </div>
     </div>
 

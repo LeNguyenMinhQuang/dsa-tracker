@@ -541,12 +541,16 @@ app.get("/api/words", async (req, res) => {
 // Create a word
 app.post("/api/words", async (req, res) => {
   const data = await loadData(req);
-  const { term, pronunciation, groupId, meanings } = req.body;
+  const { term, pronunciation, groupId, meanings, status } = req.body;
   if (!term || !term.trim())
     return res.status(400).json({ error: "Từ không được để trống" });
   const cleaned = validMeanings(meanings);
   if (!cleaned)
     return res.status(400).json({ error: "Cần ít nhất 1 nghĩa có định nghĩa" });
+
+  // status tuỳ chọn (dùng cho Discover: thêm từ kèm luôn trạng thái đã chọn)
+  const hasStatus =
+    status === "known" || status === "unsure" || status === "review";
 
   const id = crypto.randomUUID();
   const word = {
@@ -555,10 +559,10 @@ app.post("/api/words", async (req, res) => {
     pronunciation: (pronunciation || "").trim(),
     groupId: groupId || null,
     meanings: cleaned,
-    status: "unsure",
+    status: hasStatus ? status : "unsure",
     createdDate: todayStr(),
-    lastReviewed: null,
-    reviewCount: 0,
+    lastReviewed: hasStatus ? todayStr() : null,
+    reviewCount: hasStatus ? 1 : 0,
   };
   data.words[id] = word;
   await saveData(req, data);
@@ -605,6 +609,228 @@ app.post("/api/words/:id/status", async (req, res) => {
   await saveData(req, data);
   res.json(word);
 });
+
+// ---------- Discover: gợi ý từ mới từ các API miễn phí ----------
+// Datamuse (danh sách từ theo chủ đề + tần suất) -> Free Dictionary API (phiên âm,
+// định nghĩa, ví dụ) -> Google Translate (endpoint gtx, không cần key; dự phòng MyMemory)
+// để lấy nghĩa tiếng Việt. Kết quả có cùng cấu trúc với từ trong database.
+const DISCOVER_TOPICS = [
+  "office",
+  "business",
+  "contract",
+  "finance",
+  "marketing",
+  "travel",
+  "hotel",
+  "restaurant",
+  "health",
+  "technology",
+  "manufacturing",
+  "shipping",
+  "retail",
+  "employment",
+  "meeting",
+  "banking",
+  "insurance",
+  "real estate",
+  "education",
+  "law",
+  "energy",
+  "advertising",
+  "customer",
+  "schedule",
+  "project",
+  "negotiation",
+  "purchase",
+  "event",
+  "transportation",
+  "environment",
+  "management",
+  "equipment",
+  "report",
+  "budget",
+  "training",
+];
+const POS_SHORT = {
+  noun: "n.",
+  verb: "v.",
+  adjective: "adj.",
+  adverb: "adv.",
+};
+
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+async function fetchJson(url, timeoutMs = 3500) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Có phải một dạng biến thể (số nhiều / chia động từ đơn giản) của từ đã có không
+function isKnownForm(word, existing) {
+  if (existing.has(word)) return true;
+  const stems = [
+    word.replace(/ies$/, "y"),
+    word.replace(/es$/, ""),
+    word.replace(/s$/, ""),
+    word.replace(/ed$/, ""),
+    word.replace(/ing$/, ""),
+  ];
+  return stems.some((st) => st !== word && st.length >= 3 && existing.has(st));
+}
+
+async function discoverCandidates(existing) {
+  const topics = shuffleArr(DISCOVER_TOPICS).slice(0, 3);
+  const lists = await Promise.all(
+    topics.map((t) =>
+      fetchJson(
+        `https://api.datamuse.com/words?ml=${encodeURIComponent(t)}&md=fp&max=300`,
+      ),
+    ),
+  );
+  const seen = new Set();
+  const out = [];
+  for (const list of lists) {
+    for (const item of list || []) {
+      const w = String(item.word || "").toLowerCase();
+      if (!/^[a-z]{4,14}$/.test(w) || seen.has(w) || isKnownForm(w, existing))
+        continue;
+      const f = (item.tags || []).find((t) => t.startsWith("f:"));
+      const freq = f ? parseFloat(f.slice(2)) : 0;
+      // bỏ từ quá hiếm (freq thấp) và từ quá cơ bản (freq cao)
+      if (!(freq >= 1 && freq <= 300)) continue;
+      seen.add(w);
+      out.push(w);
+    }
+  }
+  return shuffleArr(out);
+}
+
+async function lookupWord(word) {
+  const data = await fetchJson(
+    `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`,
+  );
+  if (!Array.isArray(data) || data.length === 0) return null;
+
+  let pron = "";
+  for (const e of data) {
+    if (e.phonetic) {
+      pron = e.phonetic;
+      break;
+    }
+    const p = (e.phonetics || []).find((x) => x.text);
+    if (p) {
+      pron = p.text;
+      break;
+    }
+  }
+
+  for (const e of data) {
+    const m = (e.meanings || []).find(
+      (x) => x.definitions && x.definitions[0] && x.definitions[0].definition,
+    );
+    if (!m) continue;
+    const withExample = m.definitions.find((d) => d.example);
+    return {
+      term: word,
+      pronunciation: pron,
+      pos: m.partOfSpeech || "",
+      englishDef: m.definitions[0].definition,
+      example: withExample ? withExample.example : "",
+    };
+  }
+  return null;
+}
+
+async function translateToVi(word, pos) {
+  const g = await fetchJson(
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&dt=bd&q=${encodeURIComponent(word)}`,
+  );
+  if (Array.isArray(g)) {
+    // dt=bd: g[1] = [[loạiTừ, [bản dịch...], ...], ...] -> ưu tiên đúng loại từ của định nghĩa
+    if (Array.isArray(g[1])) {
+      const hit = g[1].find((e) => e[0] === pos) || g[1][0];
+      if (hit && Array.isArray(hit[1]) && hit[1].length)
+        return hit[1].slice(0, 3).join(", ");
+    }
+    const t = g[0] && g[0][0] && g[0][0][0];
+    if (t && String(t).toLowerCase() !== word) return String(t);
+  }
+  const mm = await fetchJson(
+    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|vi`,
+  );
+  const t2 = mm && mm.responseData && mm.responseData.translatedText;
+  if (t2 && !/MYMEMORY/i.test(t2) && t2.toLowerCase() !== word)
+    return String(t2).toLowerCase();
+  return null;
+}
+
+app.post(
+  "/api/discover",
+  wrap(async (req, res) => {
+    const data = await loadData(req);
+    const body = req.body || {};
+    const count = Math.min(Math.max(parseInt(body.count, 10) || 10, 1), 20);
+
+    // loại các từ user đã có + các từ user từng bỏ qua (client gửi lên)
+    const existing = new Set(
+      Object.values(data.words).map((w) => w.term.trim().toLowerCase()),
+    );
+    const skipped = Array.isArray(body.exclude)
+      ? body.exclude.slice(0, 1000).map((x) => String(x).toLowerCase())
+      : [];
+    skipped.forEach((x) => existing.add(x));
+
+    const results = [];
+    const tried = new Set();
+    for (let round = 0; round < 2 && results.length < count; round++) {
+      const need = count - results.length;
+      const cands = (await discoverCandidates(existing))
+        .filter((w) => !tried.has(w))
+        .slice(0, need * 3);
+      cands.forEach((w) => tried.add(w));
+
+      const looked = (await Promise.all(cands.map(lookupWord)))
+        .filter(Boolean)
+        .slice(0, need);
+      const translated = await Promise.all(
+        looked.map(async (e) => {
+          const vi = await translateToVi(e.term, e.pos);
+          if (!vi) return null;
+          const pos = POS_SHORT[e.pos] || e.pos;
+          return {
+            term: e.term,
+            pronunciation: e.pronunciation,
+            meanings: [
+              {
+                definition: vi,
+                explain: pos ? `(${pos}) ${e.englishDef}` : e.englishDef,
+                example: e.example,
+              },
+            ],
+          };
+        }),
+      );
+      results.push(...translated.filter(Boolean));
+    }
+    res.json(results);
+  }),
+);
 
 // ---------- Checklists ----------
 

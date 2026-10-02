@@ -1688,3 +1688,55 @@ body.picking .app {
 .quiz-speak {
   margin-left: 0;
 }
+
+/* ===================== Discover ===================== */
+
+.discover-msg {
+  padding: 36px 8px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.discover-msg .btn {
+  display: block;
+  margin: 14px auto 0;
+  flex: none;
+  padding: 10px 18px;
+}
+#discoverControls .quiz-status-hint {
+  margin-bottom: 8px;
+}
+.discover-add-seg {
+  display: flex;
+  margin-bottom: 12px;
+}
+.discover-add-btn {
+  flex: 1;
+  height: 40px;
+  background: transparent;
+  border: 2px solid var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.discover-add-btn + .discover-add-btn {
+  margin-left: -2px;
+}
+.discover-add-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+.discover-add-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.discover-add-no.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.discover-add-yes.active {
+  background: var(--ink);
+  color: var(--paper);
+}
