@@ -34,7 +34,11 @@
           <span id="userLabel">USER / —</span>
           <span>REV 3.0</span>
           <div class="meta-actions">
-            <button class="icon-btn" id="switchUserBtn" title="Switch User Profile">
+            <button
+              class="icon-btn"
+              id="switchUserBtn"
+              title="Switch User Profile"
+            >
               [ Switch User ]
             </button>
             <button class="icon-btn" id="settingsBtn" title="Settings">
@@ -78,11 +82,15 @@
                 ><i class="dot incomplete"></i> Incomplete</span
               >
               <span class="legend-item"><i class="dot today"></i> Today</span>
-              <span class="legend-item"><i class="dot diff-easy"></i> Easy</span>
+              <span class="legend-item"
+                ><i class="dot diff-easy"></i> Easy</span
+              >
               <span class="legend-item"
                 ><i class="dot diff-medium"></i> Medium</span
               >
-              <span class="legend-item"><i class="dot diff-hard"></i> Hard</span>
+              <span class="legend-item"
+                ><i class="dot diff-hard"></i> Hard</span
+              >
             </div>
           </section>
         </section>
@@ -110,14 +118,18 @@
             </select>
           </div>
           <div class="vocab-actions">
-            <button class="btn btn-secondary" id="addWordBtn">+ Add Word</button>
+            <button class="btn btn-secondary" id="addWordBtn">
+              + Add Word
+            </button>
             <button class="btn btn-primary" id="testModeBtn">
               Flashcards <span class="badge-count" id="unsureCount">0</span>
             </button>
             <button class="btn btn-secondary" id="quizModeBtn">
               Quiz Mode
             </button>
-            <button class="btn btn-secondary" id="discoverBtn">Discover Words</button>
+            <button class="btn btn-secondary" id="discoverBtn">
+              Discover Words
+            </button>
           </div>
 
           <div class="vocab-stats" id="vocabStats"></div>
@@ -125,7 +137,8 @@
           <div class="word-list" id="wordList"></div>
           <div class="empty-state" id="wordEmpty" style="display: none">
             <p>
-              No words added yet. Click "+ Add Word" or "Discover Words" to build your vocabulary.
+              No words added yet. Click "+ Add Word" or "Discover Words" to
+              build your vocabulary.
             </p>
           </div>
         </section>
@@ -142,7 +155,8 @@
           <div class="checklist-grid" id="checklistGrid"></div>
           <div class="empty-state" id="checklistEmpty" style="display: none">
             <p>
-              No checklists found. Click "+ New Checklist" to create manually, or "Import JSON" to import existing ones.
+              No checklists found. Click "+ New Checklist" to create manually,
+              or "Import JSON" to import existing ones.
             </p>
           </div>
         </section>
@@ -190,7 +204,8 @@
         <button class="btn btn-primary" id="settingsSave">Save Settings</button>
       </div>
       <p class="import-help">
-        Settings changes apply to new/unopened days. Past daily logs are preserved.
+        Settings changes apply to new/unopened days. Past daily logs are
+        preserved.
       </p>
     </div>
 
@@ -218,7 +233,9 @@
       <h2 id="wordModalTitle">Add New Word</h2>
       <label>Word / Phrase</label>
       <input type="text" id="wordTermInput" placeholder="e.g. execute" />
-      <span class="field-label-inline">Phonetic / Pronunciation (optional)</span>
+      <span class="field-label-inline"
+        >Phonetic / Pronunciation (optional)</span
+      >
       <input type="text" id="wordPronInput" placeholder="e.g. /ˈɛk.sə.kjuːt/" />
       <span class="field-label-inline">Topic / Group (optional)</span>
       <select class="group-select" id="wordGroupInput">
@@ -273,7 +290,9 @@
       <p class="import-help" id="testSetupHint"></p>
       <div class="task-actions">
         <button class="btn btn-secondary" id="testSetupCancel">Cancel</button>
-        <button class="btn btn-primary" id="testSetupStart">Start Practice</button>
+        <button class="btn btn-primary" id="testSetupStart">
+          Start Practice
+        </button>
       </div>
     </div>
 
@@ -367,7 +386,9 @@
         <div class="test-done-title">[ Completed ]</div>
         <p id="discoverDoneSummary"></p>
         <div class="task-actions">
-          <button class="btn btn-secondary" id="discoverDoneClose">Close</button>
+          <button class="btn btn-secondary" id="discoverDoneClose">
+            Close
+          </button>
           <button class="btn btn-primary" id="discoverMore">
             Discover More
           </button>
@@ -455,9 +476,9 @@
           </button>
           <button
             type="button"
-            class="quiz-status-btn quiz-status-keep active"
-            data-status=""
-            title="Keep current status"
+            class="quiz-status-btn quiz-status-keep"
+            data-status="review"
+            title="Mark as Review"
           >
             O
           </button>
@@ -507,7 +528,9 @@
           >{ "name": "...", "items": [{ "text": "...", "checked": false }]
           }</code
         >
-        or select a <code>.json</code> file below. You can import multiple checklists at once using <code>{ "checklists": [ {...}, {...} ] }</code>.
+        or select a <code>.json</code> file below. You can import multiple
+        checklists at once using
+        <code>{ "checklists": [ {...}, {...} ] }</code>.
       </p>
       <div class="import-file-row">
         <input

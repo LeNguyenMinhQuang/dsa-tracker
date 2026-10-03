@@ -7,20 +7,34 @@ const quizState = {
 };
 
 function initQuiz() {
-  document.getElementById("quizModeBtn").addEventListener("click", openQuizSetup);
-  document.getElementById("quizSetupCancel").addEventListener("click", closeQuizSetup);
-  document.getElementById("quizSetupOverlay").addEventListener("click", closeQuizSetup);
-  document.getElementById("quizSetupStart").addEventListener("click", startQuizFromSetup);
-  document.querySelectorAll('input[name="quizSetupStatus"]').forEach((r) =>
-    r.addEventListener("change", updateQuizSetupHint)
-  );
+  document
+    .getElementById("quizModeBtn")
+    .addEventListener("click", openQuizSetup);
+  document
+    .getElementById("quizSetupCancel")
+    .addEventListener("click", closeQuizSetup);
+  document
+    .getElementById("quizSetupOverlay")
+    .addEventListener("click", closeQuizSetup);
+  document
+    .getElementById("quizSetupStart")
+    .addEventListener("click", startQuizFromSetup);
+  document
+    .querySelectorAll('input[name="quizSetupStatus"]')
+    .forEach((r) => r.addEventListener("change", updateQuizSetupHint));
   document.getElementById("quizClose").addEventListener("click", closeQuizMode);
-  document.getElementById("quizOverlay").addEventListener("click", closeQuizMode);
-  document.getElementById("quizDoneClose").addEventListener("click", closeQuizMode);
+  document
+    .getElementById("quizOverlay")
+    .addEventListener("click", closeQuizMode);
+  document
+    .getElementById("quizDoneClose")
+    .addEventListener("click", closeQuizMode);
   document.querySelectorAll(".quiz-status-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (btn.disabled) return;
-      document.querySelectorAll(".quiz-status-btn").forEach((b) => b.classList.remove("active"));
+      document
+        .querySelectorAll(".quiz-status-btn")
+        .forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       quizState.selectedStatusChange = btn.dataset.status;
     });
@@ -123,17 +137,23 @@ function closeQuizMode() {
   document.getElementById("quizStage").classList.remove("show");
 }
 
-function resetQuizStatusSeg() {
-  quizState.selectedStatusChange = "";
+// Default selected status button follows the current status of the word:
+// unsure -> X, review -> O, known -> V
+function resetQuizStatusSeg(defaultStatus) {
+  const status = ["unsure", "review", "known"].includes(defaultStatus)
+    ? defaultStatus
+    : "unsure";
+  quizState.selectedStatusChange = status;
   document.querySelectorAll(".quiz-status-btn").forEach((b) => {
     b.disabled = false;
-    b.classList.toggle("active", b.dataset.status === "");
+    b.classList.toggle("active", b.dataset.status === status);
   });
 }
 
 function buildQuizQuestion() {
-  resetQuizStatusSeg();
   const w = quizState.queue[0];
+  resetQuizStatusSeg(w.status);
+
   const defOf = (x) => (x.meanings[0] && x.meanings[0].definition) || "";
   const correctDef = defOf(w) || "(no definition)";
 
@@ -224,8 +244,7 @@ async function applyQuizStatusChange(word, status) {
       body: JSON.stringify({ status }),
     });
     if (res.ok) word.status = status;
-  } catch (e) {
-  }
+  } catch (e) {}
 }
 
 function handleQuizAnswer(isCorrect, clickedBtn, optWrap) {
@@ -255,7 +274,10 @@ function handleQuizAnswer(isCorrect, clickedBtn, optWrap) {
     const current = quizState.queue.shift();
 
     if (isCorrect) {
-      if (chosenStatus) applyQuizStatusChange(current, chosenStatus);
+      // Only call the API when the status actually changes
+      if (chosenStatus && chosenStatus !== current.status) {
+        applyQuizStatusChange(current, chosenStatus);
+      }
     } else {
       quizState.mistakes++;
       const insertPos = Math.floor(
