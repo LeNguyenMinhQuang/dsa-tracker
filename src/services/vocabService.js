@@ -26,8 +26,7 @@ async function getGroups() {
 
 // Queue image generation for a word (shared across users, fire-and-forget)
 function queueImage(word) {
-  const withExplain = (word.meanings || []).find((m) => m.explain);
-  const hint = withExplain ? withExplain.explain : "";
+  const hint = imageService.meaningHint(word); // Vietnamese meaning
   imageService
     .enqueueTerms([{ term: word.term, hint }])
     .then((stats) => {

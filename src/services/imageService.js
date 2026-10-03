@@ -24,9 +24,7 @@ const {
 
 const CHUNK = 500;
 const BETWEEN_MS = 2000; // pause between two generations (rate limit friendly)
-const IDLE_POLL_MS = 120000; // how often the idle worker checks the queue
 const FAIL_DELAY_MS = 15000;
-const RATE_LIMIT_DELAY_MS = 10 * 60 * 1000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -60,12 +58,52 @@ function buildPrompt(term, hint, attempt = 0) {
       `Safe for all ages, clean white background, one central subject, no text, no letters.`
     );
   }
-  const meaning = hint ? ` Meaning: ${String(hint).slice(0, 150)}.` : "";
+  const meaning = String(hint || "")
+    .trim()
+    .slice(0, 150);
+  if (!meaning) {
+    // No Vietnamese meaning available: same prompt without the meaning lines
+    return (
+      `Create a clear educational illustration for the English vocabulary word "${term}".\n\n` +
+      `Use a concrete, realistic, immediately understandable scene. If it is an action, clearly show the action taking place. ` +
+      `If it is an object, clearly show the object. If it is an emotion, condition, or abstract concept, show a natural real-world situation that strongly communicates it. ` +
+      `Do NOT rely on written words, labels, captions, signs, letters, numbers, or symbols. ` +
+      `No metaphors, puns, visual wordplay, or abstract symbolism. ` +
+      `Simple composition: one main subject, one clear situation, minimal background. ` +
+      `Natural human anatomy and realistic object proportions. Friendly, polished, modern educational illustration style. ` +
+      `No text anywhere in the image. Square 1:1 composition, important subject centered and prominent. ` +
+      `The image is for an English vocabulary flashcard.`
+    );
+  }
   return (
-    `A simple, clear, family-friendly flat vector illustration that represents the word "${term}".` +
-    `${meaning} Clean white background, bold shapes, friendly colors, ` +
-    `one central subject, no text, no letters, no watermark.`
+    `Create a clear educational illustration for the English vocabulary word "${term}", meaning "${meaning}".\n\n` +
+    `The image must visually communicate exactly this meaning: "${meaning}".\n\n` +
+    `Important requirements:\n` +
+    `* Represent the specific meaning given above, NOT another meaning of the English word.\n` +
+    `* Use a concrete, realistic, immediately understandable scene.\n` +
+    `* If it is an action, clearly show the action taking place.\n` +
+    `* If it is an object, clearly show the object.\n` +
+    `* If it is an emotion, condition, or abstract concept, show a natural real-world situation that strongly communicates it.\n` +
+    `* Use visual context when necessary to distinguish this meaning from other meanings.\n` +
+    `* Do NOT rely on written words, labels, captions, signs, letters, numbers, or symbols.\n` +
+    `* Do NOT create metaphors, puns, visual wordplay, or abstract symbolism.\n` +
+    `* Keep the composition simple: one main subject, one clear situation, minimal background.\n` +
+    `* Make the intended meaning recognizable within a few seconds.\n` +
+    `* Natural human anatomy and realistic object proportions.\n` +
+    `* Friendly, polished, modern educational illustration style.\n` +
+    `* Visually memorable but not overly artistic or decorative.\n` +
+    `* No text anywhere in the image.\n` +
+    `* Square 1:1 composition.\n` +
+    `* Center the important subject and make it visually prominent.\n` +
+    `* The image is for an English vocabulary flashcard.\n\n` +
+    `The most important goal is semantic accuracy: the image must make the learner think of "${meaning}", not another meaning of "${term}".`
   );
+}
+
+// The hint is the Vietnamese meaning of the word (first definition)
+function meaningHint(word) {
+  const m = ((word && word.meanings) || []).find((x) => x && x.definition);
+  return m ? String(m.definition).trim() : "";
 }
 
 async function hmgetChunked(key, fields) {
@@ -116,7 +154,12 @@ async function enqueueTerms(items, opts = {}) {
   }
 
   const terms = [...hints.keys()];
-  const stats = { total: terms.length, alreadyHave: 0, failedSkipped: 0, queued: 0 };
+  const stats = {
+    total: terms.length,
+    alreadyHave: 0,
+    failedSkipped: 0,
+    queued: 0,
+  };
   if (terms.length === 0) return stats;
 
   const have = await hmgetChunked(IMAGES_KEY, terms);
@@ -141,7 +184,8 @@ async function enqueueTerms(items, opts = {}) {
 
     const hintObj = {};
     for (const t of chunk) if (hints.get(t)) hintObj[t] = hints.get(t);
-    if (Object.keys(hintObj).length > 0) await redis.hset(IMAGES_HINTS_KEY, hintObj);
+    if (Object.keys(hintObj).length > 0)
+      await redis.hset(IMAGES_HINTS_KEY, hintObj);
 
     if (opts.force) await redis.hdel(IMAGES_FAILS_KEY, ...chunk);
   }
@@ -161,8 +205,7 @@ async function collectAllWordItems() {
     const data = await redis.get(userKey(u.id));
     const words = Object.values((data && data.words) || {});
     for (const w of words) {
-      const withExplain = (w.meanings || []).find((m) => m.explain);
-      items.push({ term: w.term, hint: withExplain ? withExplain.explain : "" });
+      items.push({ term: w.term, hint: meaningHint(w) });
     }
     perUser.push({ name: u.name, words: words.length });
   }
@@ -177,17 +220,76 @@ async function backfillAll({ force = false, dryRun = false } = {}) {
   return { ...stats, users: perUser };
 }
 
+/* ------------------------------ deletion ----------------------------- */
+
+async function destroyCloudinary(term) {
+  if (!cloudinary.config().cloud_name) return;
+  try {
+    await cloudinary.uploader.destroy(publicIdFor(term), { invalidate: true });
+  } catch (e) {
+    console.warn(
+      `[images] cloudinary destroy failed for "${term}": ${e.message}`,
+    );
+  }
+}
+
+// Remove the image of ONE word (Redis + Cloudinary). The word is not re-queued
+// automatically; use "Generate missing images" to create a new one.
+async function deleteImage(term) {
+  const t = normalizeTerm(term);
+  if (!t) {
+    const err = new Error("Term is required");
+    err.status = 400;
+    throw err;
+  }
+  const existed = await redis.hget(IMAGES_KEY, t);
+  await destroyCloudinary(t);
+  await redis.hdel(IMAGES_KEY, t);
+  await redis.hdel(IMAGES_HINTS_KEY, t);
+  await redis.hdel(IMAGES_FAILS_KEY, t);
+  await redis.srem(IMAGES_PENDING_KEY, `w:${t}`);
+  return { term: t, deleted: !!existed };
+}
+
+// Remove EVERY illustration and clear the generation queue.
+async function deleteAllImages() {
+  const count = Number((await redis.hlen(IMAGES_KEY)) || 0);
+  if (cloudinary.config().cloud_name) {
+    try {
+      for (let i = 0; i < 50; i++) {
+        const r = await cloudinary.api.delete_resources_by_prefix("vocab/", {
+          invalidate: true,
+        });
+        if (!r || !r.partial) break; // partial = more than 1000 left, repeat
+      }
+    } catch (e) {
+      console.warn("[images] cloudinary bulk delete failed:", e.message);
+    }
+  }
+  await redis.del(
+    IMAGES_KEY,
+    IMAGES_PENDING_KEY,
+    IMAGES_HINTS_KEY,
+    IMAGES_FAILS_KEY,
+  );
+  return { deleted: count };
+}
+
 /* --------------------------- AI generation --------------------------- */
 
 async function generateWithCloudflare(prompt) {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const token = process.env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !token) {
-    const err = new Error("CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN are missing");
+    const err = new Error(
+      "CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN are missing",
+    );
     err.rateLimited = true; // "blocked": keep the term queued, do not count a failure
     throw err;
   }
-  const model = process.env.CLOUDFLARE_IMAGE_MODEL || "@cf/black-forest-labs/flux-1-schnell";
+  const model =
+    process.env.CLOUDFLARE_IMAGE_MODEL ||
+    "@cf/black-forest-labs/flux-1-schnell";
   const res = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
     {
@@ -202,7 +304,9 @@ async function generateWithCloudflare(prompt) {
   );
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    const err = new Error(`Cloudflare HTTP ${res.status} ${text.slice(0, 200)}`);
+    const err = new Error(
+      `Cloudflare HTTP ${res.status} ${text.slice(0, 200)}`,
+    );
     // "Blocked" = quota used up (429 / daily allocation) or bad credentials
     // (401/403). None of these are the word's fault, so the term stays queued.
     err.rateLimited =
@@ -229,7 +333,8 @@ async function generateWithPollinations(prompt) {
     throw err;
   }
   const type = res.headers.get("content-type") || "";
-  if (!type.startsWith("image/")) throw new Error("Pollinations returned non-image");
+  if (!type.startsWith("image/"))
+    throw new Error("Pollinations returned non-image");
   return Buffer.from(await res.arrayBuffer());
 }
 
@@ -258,7 +363,9 @@ async function generateImageBuffer(prompt) {
       console.warn(`[images] provider "${name}" failed: ${e.message}`);
     }
   }
-  const err = new Error(lastErr ? lastErr.message : "No image provider configured");
+  const err = new Error(
+    lastErr ? lastErr.message : "No image provider configured",
+  );
   // If any provider is blocked (quota / credentials), the term is not at fault
   err.rateLimited = anyRateLimited;
   throw err;
@@ -268,7 +375,9 @@ async function generateImageBuffer(prompt) {
 
 function uploadBuffer(buffer, publicId) {
   if (!cloudinary.config().cloud_name) {
-    const err = new Error("Cloudinary is not configured (check Cloudinary env variables)");
+    const err = new Error(
+      "Cloudinary is not configured (check Cloudinary env variables)",
+    );
     err.rateLimited = true; // config problem: keep the term queued
     return Promise.reject(err);
   }
@@ -288,7 +397,8 @@ function uploadBuffer(buffer, publicId) {
       },
       (err, result) => {
         if (err) return reject(err);
-        if (!result || !result.secure_url) return reject(new Error("Cloudinary returned no URL"));
+        if (!result || !result.secure_url)
+          return reject(new Error("Cloudinary returned no URL"));
         resolve(result);
       },
     );
@@ -304,6 +414,7 @@ async function processOne() {
   if (!member) return "idle";
   const term = String(member).replace(/^w:/, "");
   if (!term) return "skipped";
+  worker.currentTerm = term;
 
   // Another user (or an earlier run) may already have produced it
   if (await redis.hget(IMAGES_KEY, term)) {
@@ -336,17 +447,25 @@ async function processOne() {
       return "ratelimited";
     }
     const attempts = await redis.hincrby(IMAGES_FAILS_KEY, term, 1);
-    console.error(`[images] ✗ ${term} (attempt ${attempts}/${IMAGE_MAX_ATTEMPTS}): ${e.message}`);
-    if (attempts < IMAGE_MAX_ATTEMPTS) await redis.sadd(IMAGES_PENDING_KEY, `w:${term}`);
+    console.error(
+      `[images] ✗ ${term} (attempt ${attempts}/${IMAGE_MAX_ATTEMPTS}): ${e.message}`,
+    );
+    if (attempts < IMAGE_MAX_ATTEMPTS)
+      await redis.sadd(IMAGES_PENDING_KEY, `w:${term}`);
     return "failed";
   } finally {
     await redis.del(lock).catch(() => {});
+    worker.currentTerm = null;
   }
 }
 
 // Process the queue until it is empty, rate limited, or `limit` is reached.
 // Used by the backfill script and usable from a cron / serverless function.
-async function processPending({ limit = Infinity, delayMs = BETWEEN_MS, onResult } = {}) {
+async function processPending({
+  limit = Infinity,
+  delayMs = BETWEEN_MS,
+  onResult,
+} = {}) {
   const stats = { done: 0, failed: 0, skipped: 0, stopped: "idle" };
   let n = 0;
   while (true) {
@@ -368,39 +487,73 @@ async function processPending({ limit = Infinity, delayMs = BETWEEN_MS, onResult
   return stats;
 }
 
-const worker = { started: false, busy: false, timer: null, pausedUntil: 0, lastBlocked: null };
+/*
+ * Manual worker: NOTHING runs on its own. An admin presses "Generate missing
+ * images" (Settings > Admin) and the queue is processed until it is empty or
+ * the provider quota is used up. Then the worker stops again.
+ */
+const worker = {
+  running: false,
+  stopRequested: false,
+  currentTerm: null,
+  run: null, // { startedAt, done, failed, skipped }
+  lastRun: null, // summary of the previous run
+  lastBlocked: null,
+};
 
-function schedule(ms) {
-  clearTimeout(worker.timer);
-  worker.timer = setTimeout(tick, ms);
-}
-
-async function tick() {
-  if (worker.busy) return;
-  worker.busy = true;
-  let delay = IDLE_POLL_MS;
+async function runQueue() {
+  const run = { startedAt: Date.now(), done: 0, failed: 0, skipped: 0 };
+  worker.run = run;
+  worker.lastBlocked = null;
+  let stopped = "idle";
   try {
-    const r = await processOne();
-    if (r === "idle") delay = IDLE_POLL_MS;
-    else if (r === "failed") delay = FAIL_DELAY_MS;
-    else if (r === "ratelimited") {
-      delay = RATE_LIMIT_DELAY_MS;
-      worker.pausedUntil = Date.now() + RATE_LIMIT_DELAY_MS;
-    } else if (r === "skipped") delay = 0;
-    else delay = BETWEEN_MS;
+    while (true) {
+      if (worker.stopRequested) {
+        stopped = "cancelled";
+        break;
+      }
+      const r = await processOne();
+      if (r === "idle") break;
+      if (r === "ratelimited") {
+        stopped = "ratelimited";
+        break;
+      }
+      run[r]++;
+      if (r === "failed") await sleep(FAIL_DELAY_MS);
+      else if (r !== "skipped") await sleep(BETWEEN_MS);
+    }
   } catch (e) {
-    console.error("[images] worker error:", e.message);
-    delay = FAIL_DELAY_MS;
+    console.error("[images] run error:", e.message);
+    stopped = "error";
+    worker.lastBlocked = { message: e.message, at: Date.now() };
   } finally {
-    worker.busy = false;
+    worker.lastRun = { ...run, stopped, endedAt: Date.now() };
+    worker.run = null;
+    worker.running = false;
+    worker.stopRequested = false;
   }
-  schedule(delay);
 }
 
-function startWorker() {
-  if (worker.started) return;
-  worker.started = true;
-  schedule(3000);
+// Start processing the queue (no-op when already running). Returns true if a
+// new run was started.
+function start() {
+  if (worker.running) return false;
+  worker.running = true;
+  worker.stopRequested = false;
+  runQueue();
+  return true;
+}
+
+function stop() {
+  if (worker.running) worker.stopRequested = true;
+  return worker.running;
+}
+
+// Kept for compatibility with the old background worker: does nothing now
+function startWorker() {}
+function wake() {}
+function resume() {
+  return start();
 }
 
 async function getStatus() {
@@ -411,37 +564,28 @@ async function getStatus() {
   return {
     pending,
     images: Number(images || 0),
-    workerRunning: worker.started,
-    paused: Date.now() < worker.pausedUntil,
-    pausedUntil: worker.pausedUntil || null,
-    lastBlocked: worker.lastBlocked || null,
+    running: worker.running,
+    stopping: worker.stopRequested,
+    currentTerm: worker.currentTerm,
+    run: worker.run,
+    lastRun: worker.lastRun,
+    lastBlocked: worker.lastBlocked,
   };
-}
-
-// Manual "generate now": cancels a quota/credential pause and runs immediately.
-// Returns false when the background worker is disabled on this server.
-function resume() {
-  worker.pausedUntil = 0;
-  if (!worker.started) return false;
-  if (!worker.busy) schedule(500);
-  return true;
-}
-
-// Called right after new terms were queued so the worker reacts immediately
-function wake() {
-  if (!worker.started || worker.busy) return;
-  if (Date.now() < worker.pausedUntil) return;
-  schedule(500);
 }
 
 module.exports = {
   normalizeTerm,
   getImageUrls,
+  meaningHint,
+  deleteImage,
+  deleteAllImages,
   enqueueTerms,
   pendingCount,
   collectAllWordItems,
   backfillAll,
   getStatus,
+  start,
+  stop,
   resume,
   processOne,
   processPending,

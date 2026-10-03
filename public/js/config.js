@@ -18,22 +18,39 @@ function getStoredUser() {
 
 let currentUser = getStoredUser();
 
+// opts.silent = true  -> no loading UI (background polling)
+// opts.loadingLabel   -> custom title for the loading overlay
 function api(url, opts = {}) {
-  const headers = { ...(opts.headers || {}) };
+  const { silent, loadingLabel, ...fetchOpts } = opts;
+  const headers = { ...(fetchOpts.headers || {}) };
   if (currentUser && currentUser.token)
     headers["Authorization"] = "Bearer " + currentUser.token;
-  return window.fetch(url, { ...opts, headers }).then((res) => {
-    // 401 = session missing/expired. (A wrong password on /api/login is also 401
-    // but must not log the user out.)
-    if (res.status === 401 && !url.startsWith("/api/login")) {
-      try {
-        localStorage.removeItem(USER_KEY);
-      } catch (e) {}
-      showUserPicker();
-      return new Promise(() => {});
-    }
-    return res;
-  });
+  const track =
+    !silent && typeof Loading !== "undefined"
+      ? Loading.track(
+          fetchOpts.method,
+          loadingLabel || loadingLabelFor(url, fetchOpts.method),
+        )
+      : null;
+  return window.fetch(url, { ...fetchOpts, headers }).then(
+    (res) => {
+      if (track) track.done();
+      // 401 = session missing/expired. (A wrong password on /api/login is also 401
+      // but must not log the user out.)
+      if (res.status === 401 && !url.startsWith("/api/login")) {
+        try {
+          localStorage.removeItem(USER_KEY);
+        } catch (e) {}
+        showUserPicker();
+        return new Promise(() => {});
+      }
+      return res;
+    },
+    (err) => {
+      if (track) track.done();
+      throw err;
+    },
+  );
 }
 
 function fmtDate(dateStr) {

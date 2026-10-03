@@ -217,7 +217,12 @@
 
         <span class="field-label-inline">Add user</span>
         <div class="admin-add-row">
-          <input type="text" id="adminNewName" maxlength="30" placeholder="Profile name" />
+          <input
+            type="text"
+            id="adminNewName"
+            maxlength="30"
+            placeholder="Profile name"
+          />
           <input
             type="password"
             id="adminNewPass"
@@ -230,19 +235,42 @@
             <option value="admin">Role: Admin</option>
           </select>
         </div>
-        <button type="button" class="btn btn-secondary btn-block" id="adminAddUser">
+        <button
+          type="button"
+          class="btn btn-secondary btn-block"
+          id="adminAddUser"
+        >
           + Add User
         </button>
         <div class="import-error" id="adminUserError"></div>
 
         <span class="field-label-inline">Word illustrations</span>
-        <div class="admin-image-status" id="adminImageStatus">—</div>
+        <div class="q-box" id="adminImageStatus">—</div>
         <label class="test-setup-option admin-check">
           <input type="checkbox" id="adminRetryFailed" />
           <span>Also retry words that failed before</span>
         </label>
-        <button type="button" class="btn btn-primary btn-block" id="adminGenImages">
+        <button
+          type="button"
+          class="btn btn-primary btn-block"
+          id="adminGenImages"
+        >
           Generate missing images
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary btn-block"
+          id="adminStopImages"
+          style="display: none"
+        >
+          Stop generating
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger btn-block"
+          id="adminDeleteAllImages"
+        >
+          Delete ALL images
         </button>
         <div class="admin-note" id="adminImageMsg"></div>
       </div>
@@ -297,6 +325,14 @@
         style="display: none"
       >
         Delete Word
+      </button>
+      <button
+        type="button"
+        class="delete-link"
+        id="wordDeleteImage"
+        style="display: none"
+      >
+        Delete Image (admin)
       </button>
     </div>
 
@@ -627,6 +663,7 @@
     </aside>
 
     <!-- Client JS Modules -->
+    <script src="js/loading.js"></script>
     <script src="js/config.js"></script>
     <script src="js/users.js"></script>
     <script src="js/tabs.js"></script>

@@ -33,6 +33,9 @@ function initVocab() {
   document.getElementById("wordSave").addEventListener("click", saveWord);
   document.getElementById("wordDelete").addEventListener("click", deleteWord);
   document
+    .getElementById("wordDeleteImage")
+    .addEventListener("click", deleteWordImage);
+  document
     .getElementById("addMeaningRow")
     .addEventListener("click", () => addMeaningRow());
 
@@ -100,7 +103,7 @@ function groupLabel(groupId) {
 }
 
 async function loadWords(fromPoll = false) {
-  const res = await api("/api/words");
+  const res = await api("/api/words", { silent: fromPoll === true });
   const words = await res.json();
   if (fromPoll === true) {
     // Silent refresh: only patch images in place, keep open cards open
@@ -323,6 +326,12 @@ function openWordModal(word) {
     ? word.groupId || ""
     : "";
   document.getElementById("wordDelete").style.display = word ? "block" : "none";
+  vocab.editingTerm = word ? word.term : null;
+  // Admin only: remove a wrongly generated illustration of this word
+  document.getElementById("wordDeleteImage").style.display =
+    word && word.imageUrl && typeof isAdmin === "function" && isAdmin()
+      ? "block"
+      : "none";
 
   const list = document.getElementById("meaningsList");
   list.innerHTML = "";
@@ -398,6 +407,27 @@ async function saveWord() {
   if (res.ok) {
     closeWordModal();
     loadWords();
+  }
+}
+
+async function deleteWordImage() {
+  if (!vocab.editingTerm) return;
+  if (!confirm('Delete the image of "' + vocab.editingTerm + '"?')) return;
+  const res = await api(
+    "/api/admin/images?term=" + encodeURIComponent(vocab.editingTerm),
+    { method: "DELETE" },
+  );
+  if (res.ok) {
+    const w = vocab.words.find((x) => x.id === vocab.editingId);
+    if (w) w.imageUrl = null;
+    closeWordModal();
+    loadWords();
+  } else {
+    let msg = "Could not delete the image";
+    try {
+      msg = (await res.json()).error || msg;
+    } catch (e) {}
+    alert(msg);
   }
 }
 
