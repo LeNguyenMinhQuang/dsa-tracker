@@ -4,6 +4,7 @@ const express = require("express");
 const path = require("path");
 const apiRoutes = require("./src/routes");
 const errorHandler = require("./src/middleware/errorHandler");
+const imageService = require("./src/services/imageService");
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = process.env.PORT || 3131;
@@ -21,6 +22,9 @@ app.use(errorHandler);
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 DSA Tracker running at http://${HOST}:${PORT}`);
+  // Background worker that generates illustrations for queued words.
+  // Set IMAGE_WORKER=off on serverless deployments and use a cron instead.
+  if (process.env.IMAGE_WORKER !== "off") imageService.startWorker();
 });
 
 server.on("error", (err) => {

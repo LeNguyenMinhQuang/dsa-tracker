@@ -310,3 +310,36 @@
   border-color: var(--red);
   color: #fff;
 }
+
+/* ---- Word illustrations ---- */
+.word-thumb {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+.word-thumb[hidden],
+.word-hero[hidden] {
+  display: none;
+}
+.word-hero {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 1;
+  margin-bottom: 12px;
+  object-fit: cover;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+.fc-image {
+  float: right;
+  width: 96px;
+  height: 96px;
+  margin: 0 0 8px 10px;
+  object-fit: cover;
+  background: var(--paper);
+  border: 2px solid var(--paper);
+}

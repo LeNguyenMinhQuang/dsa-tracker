@@ -2,6 +2,14 @@ const LEGACY_KEY = "dsa-tracker-data";
 const USERS_KEY = "dsa-tracker:users";
 const GROUPS_KEY = "dsa-tracker:groups";
 const LEGACY_USER_ID = "default";
+
+// Shared (cross-user) illustration images, keyed by normalized term
+const IMAGES_KEY = "dsa-tracker:images"; // hash: term -> Cloudinary URL
+const IMAGES_PENDING_KEY = "dsa-tracker:images:pending"; // set: "w:<term>"
+const IMAGES_HINTS_KEY = "dsa-tracker:images:hints"; // hash: term -> English hint
+const IMAGES_FAILS_KEY = "dsa-tracker:images:fails"; // hash: term -> failed attempts
+const IMAGE_MAX_ATTEMPTS = 3;
+const imageLockKey = (term) => `dsa-tracker:images:lock:${term}`;
 const userKey = (id) => `dsa-tracker:user:${id}`;
 
 const DISCOVER_TOPICS = [
@@ -71,6 +79,12 @@ module.exports = {
   USERS_KEY,
   GROUPS_KEY,
   LEGACY_USER_ID,
+  IMAGES_KEY,
+  IMAGES_PENDING_KEY,
+  IMAGES_HINTS_KEY,
+  IMAGES_FAILS_KEY,
+  IMAGE_MAX_ATTEMPTS,
+  imageLockKey,
   userKey,
   DISCOVER_TOPICS,
   FALLBACK_WORDS,

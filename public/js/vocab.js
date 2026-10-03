@@ -13,7 +13,12 @@ const vocab = {
   groupFilter: "",
   search: "",
   editingId: null,
+  imagePollTimer: null,
+  imagePollTries: 0,
 };
+
+const IMAGE_POLL_MS = 8000;
+const IMAGE_POLL_MAX = 15;
 
 function initVocab() {
   document
@@ -94,11 +99,65 @@ function groupLabel(groupId) {
   return `${g.name} · ${g.meaning}`;
 }
 
-async function loadWords() {
+async function loadWords(fromPoll = false) {
   const res = await api("/api/words");
-  vocab.words = await res.json();
-  renderWordList();
-  updateVocabStats();
+  const words = await res.json();
+  if (fromPoll === true) {
+    // Silent refresh: only patch images in place, keep open cards open
+    mergeWordImages(words);
+  } else {
+    vocab.words = words;
+    vocab.imagePollTries = 0;
+    renderWordList();
+    updateVocabStats();
+  }
+  scheduleImagePoll();
+}
+
+function mergeWordImages(fresh) {
+  const byId = new Map(fresh.map((w) => [w.id, w]));
+  vocab.words.forEach((w) => {
+    const f = byId.get(w.id);
+    if (f && f.imageUrl && w.imageUrl !== f.imageUrl) {
+      w.imageUrl = f.imageUrl;
+      document
+        .querySelectorAll(`.word-card[data-id="${w.id}"]`)
+        .forEach((card) => applyWordImage(card, w.imageUrl));
+    }
+  });
+}
+
+// Illustrations are generated in the background; poll a few times until they appear
+function scheduleImagePoll() {
+  clearTimeout(vocab.imagePollTimer);
+  const missing = vocab.words.some((w) => !w.imageUrl);
+  if (!missing || vocab.imagePollTries >= IMAGE_POLL_MAX) return;
+  vocab.imagePollTimer = setTimeout(() => {
+    const tab = document.getElementById("tab-vocab");
+    if (document.hidden || !tab || !tab.classList.contains("active")) return;
+    vocab.imagePollTries++;
+    loadWords(true).catch(() => {});
+  }, IMAGE_POLL_MS);
+}
+
+function makeWordImg(className, term) {
+  const img = document.createElement("img");
+  img.className = className;
+  img.alt = term;
+  img.loading = "lazy";
+  img.hidden = true;
+  img.addEventListener("error", () => {
+    img.hidden = true;
+  });
+  return img;
+}
+
+function applyWordImage(card, url) {
+  if (!url) return;
+  card.querySelectorAll(".word-thumb, .word-hero").forEach((img) => {
+    img.src = url;
+    img.hidden = false;
+  });
 }
 
 function updateVocabStats() {
@@ -161,6 +220,7 @@ function renderWordList() {
 function buildWordCard(word) {
   const card = document.createElement("div");
   card.className = "word-card";
+  card.dataset.id = word.id;
 
   const group = vocab.groups[word.groupId];
   const groupTag = group
@@ -185,6 +245,9 @@ function buildWordCard(word) {
   head
     .querySelector(".word-card-head-top")
     .appendChild(buildSpeakButtons(word.term));
+  head
+    .querySelector(".word-status-dot")
+    .after(makeWordImg("word-thumb", word.term));
 
   const body = document.createElement("div");
   body.className = "word-card-body";
@@ -199,6 +262,7 @@ function buildWordCard(word) {
   `,
     )
     .join("");
+  body.prepend(makeWordImg("word-hero", word.term));
 
   const actions = document.createElement("div");
   actions.className = "word-card-actions";
@@ -233,6 +297,7 @@ function buildWordCard(word) {
 
   card.appendChild(head);
   card.appendChild(body);
+  applyWordImage(card, word.imageUrl);
   return card;
 }
 

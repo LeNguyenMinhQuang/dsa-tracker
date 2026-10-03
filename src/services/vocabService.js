@@ -3,6 +3,7 @@ const redis = require("../config/redis");
 const { GROUPS_KEY } = require("../config/constants");
 const { loadData, saveData } = require("./dsaService");
 const { todayStr } = require("../utils/dateUtils");
+const imageService = require("./imageService");
 
 function validMeanings(meanings) {
   if (!Array.isArray(meanings) || meanings.length === 0) return null;
@@ -23,12 +24,29 @@ async function getGroups() {
   return groups;
 }
 
+// Queue image generation for a word (shared across users, fire-and-forget)
+function queueImage(word) {
+  const withExplain = (word.meanings || []).find((m) => m.explain);
+  const hint = withExplain ? withExplain.explain : "";
+  imageService
+    .enqueueTerms([{ term: word.term, hint }])
+    .then((stats) => {
+      if (stats.queued > 0) imageService.wake();
+    })
+    .catch((e) => console.error("[images] enqueue failed:", e.message));
+}
+
 async function getWords(req) {
   const data = await loadData(req);
   const words = Object.values(data.words).sort((a, b) =>
     a.term.localeCompare(b.term),
   );
-  return words;
+  // Images live in a shared hash, not in the user document
+  const urls = await imageService.getImageUrls(words.map((w) => w.term));
+  return words.map((w) => ({
+    ...w,
+    imageUrl: urls[imageService.normalizeTerm(w.term)] || null,
+  }));
 }
 
 async function createWord(req, body) {
@@ -63,6 +81,7 @@ async function createWord(req, body) {
   };
   data.words[id] = word;
   await saveData(req, data);
+  queueImage(word);
   return word;
 }
 
@@ -75,6 +94,7 @@ async function updateWord(req, id, body) {
     throw err;
   }
   const { term, pronunciation, groupId, meanings } = body;
+  const oldTerm = word.term;
   if (term && term.trim()) word.term = term.trim();
   if (pronunciation !== undefined)
     word.pronunciation = (pronunciation || "").trim();
@@ -82,6 +102,12 @@ async function updateWord(req, id, body) {
   const cleaned = validMeanings(meanings);
   if (cleaned) word.meanings = cleaned;
   await saveData(req, data);
+  if (
+    imageService.normalizeTerm(word.term) !==
+    imageService.normalizeTerm(oldTerm)
+  ) {
+    queueImage(word);
+  }
   return word;
 }
 

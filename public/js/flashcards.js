@@ -124,6 +124,9 @@ function renderTestCard() {
   document.getElementById("fcTermSmall").textContent =
     w.term + (w.pronunciation ? ` ${w.pronunciation}` : "");
   document.getElementById("fcMeanings").innerHTML =
+    (w.imageUrl
+      ? `<img class="fc-image" src="${escapeAttr(w.imageUrl)}" alt="" loading="lazy" onerror="this.remove()">`
+      : "") +
     (group
       ? `<div class="group-tag" style="margin-bottom:8px;display:inline-flex;">${escapeHtml(group.name)} · ${escapeHtml(group.meaning)}</div>`
       : "") +
