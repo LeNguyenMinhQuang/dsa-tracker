@@ -10,6 +10,14 @@ const IMAGES_HINTS_KEY = "dsa-tracker:images:hints"; // hash: term -> English hi
 const IMAGES_FAILS_KEY = "dsa-tracker:images:fails"; // hash: term -> failed attempts
 const IMAGE_MAX_ATTEMPTS = 3;
 const imageLockKey = (term) => `dsa-tracker:images:lock:${term}`;
+
+// Authentication
+const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const LOGIN_MAX_FAILS = 8;
+const LOGIN_LOCK_SECONDS = 15 * 60;
+const sessionKey = (token) => `dsa-tracker:session:${token}`;
+const userSessionsKey = (id) => `dsa-tracker:user-sessions:${id}`;
+const loginFailKey = (id) => `dsa-tracker:login-fails:${id}`;
 const userKey = (id) => `dsa-tracker:user:${id}`;
 
 const DISCOVER_TOPICS = [
@@ -85,6 +93,12 @@ module.exports = {
   IMAGES_FAILS_KEY,
   IMAGE_MAX_ATTEMPTS,
   imageLockKey,
+  SESSION_TTL_SECONDS,
+  LOGIN_MAX_FAILS,
+  LOGIN_LOCK_SECONDS,
+  sessionKey,
+  userSessionsKey,
+  loginFailKey,
   userKey,
   DISCOVER_TOPICS,
   FALLBACK_WORDS,

@@ -1,5 +1,6 @@
 /*
  * Backfill illustrations for words that already exist in every user profile.
+ * (The same action is available to admins in the app: Settings > Admin.)
  *
  * Usage (from the project root):
  *   node scripts/backfillImages.js --dry            # only count, change nothing
@@ -11,10 +12,8 @@
  * Safe to run repeatedly: words that already have an image are skipped, and
  * identical words across users are generated only once.
  */
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 
-const redis = require("../src/config/redis");
-const { USERS_KEY, userKey } = require("../src/config/constants");
 const imageService = require("../src/services/imageService");
 
 const args = process.argv.slice(2);
@@ -23,24 +22,13 @@ const limitArg = args.find((a) => a.startsWith("--limit="));
 const LIMIT = limitArg ? parseInt(limitArg.split("=")[1], 10) : Infinity;
 
 async function main() {
-  const users = (await redis.get(USERS_KEY)) || [];
-  console.log(`Found ${users.length} user profile(s).`);
-
-  const items = [];
-  for (const u of users) {
-    const data = await redis.get(userKey(u.id));
-    const words = Object.values((data && data.words) || {});
-    for (const w of words) {
-      const withExplain = (w.meanings || []).find((m) => m.explain);
-      items.push({ term: w.term, hint: withExplain ? withExplain.explain : "" });
-    }
-    console.log(`  - ${u.name}: ${words.length} word(s)`);
-  }
-
-  const stats = await imageService.enqueueTerms(items, {
+  const stats = await imageService.backfillAll({
     force: has("--retry-failed"),
     dryRun: has("--dry"),
   });
+
+  console.log(`Found ${stats.users.length} user profile(s).`);
+  stats.users.forEach((u) => console.log(`  - ${u.name}: ${u.words} word(s)`));
 
   console.log("\nDistinct words:       ", stats.total);
   console.log("Already have image:   ", stats.alreadyHave);

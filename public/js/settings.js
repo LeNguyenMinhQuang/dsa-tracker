@@ -30,9 +30,13 @@ async function openSettings() {
 
   document.getElementById("settingsOverlay").classList.add("show");
   document.getElementById("settingsModal").classList.add("show");
+
+  // Admin-only block (user management + image generation)
+  if (typeof loadAdminPanel === "function") loadAdminPanel().catch(() => {});
 }
 
 function closeSettings() {
+  if (typeof stopAdminPolling === "function") stopAdminPolling();
   document.getElementById("settingsOverlay").classList.remove("show");
   document.getElementById("settingsModal").classList.remove("show");
 }

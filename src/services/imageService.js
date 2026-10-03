@@ -8,6 +8,8 @@ const {
   IMAGES_FAILS_KEY,
   IMAGE_MAX_ATTEMPTS,
   imageLockKey,
+  USERS_KEY,
+  userKey,
 } = require("../config/constants");
 
 /*
@@ -148,6 +150,31 @@ async function enqueueTerms(items, opts = {}) {
 
 async function pendingCount() {
   return Number((await redis.scard(IMAGES_PENDING_KEY)) || 0);
+}
+
+// Every word of every user profile: [{ term, hint }]
+async function collectAllWordItems() {
+  const users = (await redis.get(USERS_KEY)) || [];
+  const items = [];
+  const perUser = [];
+  for (const u of users) {
+    const data = await redis.get(userKey(u.id));
+    const words = Object.values((data && data.words) || {});
+    for (const w of words) {
+      const withExplain = (w.meanings || []).find((m) => m.explain);
+      items.push({ term: w.term, hint: withExplain ? withExplain.explain : "" });
+    }
+    perUser.push({ name: u.name, words: words.length });
+  }
+  return { items, perUser };
+}
+
+// Queue every word (of every user) that has no image yet.
+// Shared by scripts/backfillImages.js and the admin settings panel.
+async function backfillAll({ force = false, dryRun = false } = {}) {
+  const { items, perUser } = await collectAllWordItems();
+  const stats = await enqueueTerms(items, { force, dryRun });
+  return { ...stats, users: perUser };
 }
 
 /* --------------------------- AI generation --------------------------- */
@@ -305,6 +332,7 @@ async function processOne() {
       // queued and do not count it as a failure
       await redis.sadd(IMAGES_PENDING_KEY, `w:${term}`);
       console.warn(`[images] blocked while generating "${term}": ${e.message}`);
+      worker.lastBlocked = { message: e.message, at: Date.now() };
       return "ratelimited";
     }
     const attempts = await redis.hincrby(IMAGES_FAILS_KEY, term, 1);
@@ -340,7 +368,7 @@ async function processPending({ limit = Infinity, delayMs = BETWEEN_MS, onResult
   return stats;
 }
 
-const worker = { started: false, busy: false, timer: null, pausedUntil: 0 };
+const worker = { started: false, busy: false, timer: null, pausedUntil: 0, lastBlocked: null };
 
 function schedule(ms) {
   clearTimeout(worker.timer);
@@ -375,6 +403,30 @@ function startWorker() {
   schedule(3000);
 }
 
+async function getStatus() {
+  const [pending, images] = await Promise.all([
+    pendingCount(),
+    redis.hlen(IMAGES_KEY),
+  ]);
+  return {
+    pending,
+    images: Number(images || 0),
+    workerRunning: worker.started,
+    paused: Date.now() < worker.pausedUntil,
+    pausedUntil: worker.pausedUntil || null,
+    lastBlocked: worker.lastBlocked || null,
+  };
+}
+
+// Manual "generate now": cancels a quota/credential pause and runs immediately.
+// Returns false when the background worker is disabled on this server.
+function resume() {
+  worker.pausedUntil = 0;
+  if (!worker.started) return false;
+  if (!worker.busy) schedule(500);
+  return true;
+}
+
 // Called right after new terms were queued so the worker reacts immediately
 function wake() {
   if (!worker.started || worker.busy) return;
@@ -387,6 +439,10 @@ module.exports = {
   getImageUrls,
   enqueueTerms,
   pendingCount,
+  collectAllWordItems,
+  backfillAll,
+  getStatus,
+  resume,
   processOne,
   processPending,
   startWorker,

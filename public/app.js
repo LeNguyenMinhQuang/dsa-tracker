@@ -1,6 +1,6 @@
 function init() {
   document.getElementById("userLabel").textContent =
-    "USER / " + currentUser.name;
+    "USER / " + currentUser.name + (currentUser.role === "admin" ? " [ADMIN]" : "");
   document
     .getElementById("switchUserBtn")
     .addEventListener("click", switchUser);
@@ -41,11 +41,12 @@ function init() {
   initDiscover();
   initQuiz();
   initChecklist();
+  initAdmin();
 }
 
 // Bootstrap
 initUserPicker();
-if (currentUser && currentUser.id) {
+if (currentUser && currentUser.id && currentUser.token) {
   init();
 } else {
   showUserPicker();

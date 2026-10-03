@@ -1,0 +1,86 @@
+/* Admin section of the Settings dialog */
+.admin-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 3px solid var(--ink);
+}
+.admin-title {
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.admin-title::before {
+  content: "/// ";
+  color: var(--red);
+}
+.admin-user-list {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--ink);
+  background: var(--sheet);
+}
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ink);
+}
+.admin-user-row:last-child {
+  border-bottom: 0;
+}
+.admin-user-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  word-break: break-word;
+}
+.role-badge {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.role-badge.admin {
+  background: var(--ink);
+  color: var(--paper);
+}
+.admin-user-row .btn {
+  flex: none;
+  padding: 6px 8px;
+  font-size: 10px;
+}
+.admin-add-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.admin-add-row select {
+  grid-column: 1 / -1;
+}
+.admin-image-status {
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.admin-check {
+  margin: 10px 0 0;
+}
+.admin-note {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--mute);
+  white-space: pre-wrap;
+}
+.admin-note.error {
+  color: var(--red);
+}

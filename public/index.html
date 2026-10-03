@@ -207,23 +207,63 @@
         Settings changes apply to new/unopened days. Past daily logs are
         preserved.
       </p>
+
+      <!-- Admin only: shown by admin.js when the signed-in user is an admin -->
+      <div class="admin-section" id="adminSection" style="display: none">
+        <div class="admin-title">Admin</div>
+
+        <span class="field-label-inline">User accounts</span>
+        <div class="admin-user-list" id="adminUserList"></div>
+
+        <span class="field-label-inline">Add user</span>
+        <div class="admin-add-row">
+          <input type="text" id="adminNewName" maxlength="30" placeholder="Profile name" />
+          <input
+            type="password"
+            id="adminNewPass"
+            maxlength="100"
+            placeholder="Password (min 6)"
+            autocomplete="new-password"
+          />
+          <select id="adminNewRole">
+            <option value="user">Role: User</option>
+            <option value="admin">Role: Admin</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn-secondary btn-block" id="adminAddUser">
+          + Add User
+        </button>
+        <div class="import-error" id="adminUserError"></div>
+
+        <span class="field-label-inline">Word illustrations</span>
+        <div class="admin-image-status" id="adminImageStatus">—</div>
+        <label class="test-setup-option admin-check">
+          <input type="checkbox" id="adminRetryFailed" />
+          <span>Also retry words that failed before</span>
+        </label>
+        <button type="button" class="btn btn-primary btn-block" id="adminGenImages">
+          Generate missing images
+        </button>
+        <div class="admin-note" id="adminImageMsg"></div>
+      </div>
     </div>
 
-    <!-- Add user modal -->
-    <div class="overlay" id="userOverlay"></div>
-    <div class="modal" id="userModal">
-      <h2>Add User Profile</h2>
-      <label>Profile Name</label>
+    <!-- Password modal: sign in, or admin changing a user's password -->
+    <div class="overlay" id="pwOverlay"></div>
+    <div class="modal" id="pwModal">
+      <h2 id="pwTitle">Sign in</h2>
+      <p class="import-help" id="pwDesc"></p>
+      <label>Password</label>
       <input
-        type="text"
-        id="newUserName"
-        maxlength="30"
-        placeholder="e.g. Alex"
+        type="password"
+        id="pwInput"
+        maxlength="100"
+        autocomplete="current-password"
       />
-      <div class="import-error" id="newUserError"></div>
+      <div class="import-error" id="pwError"></div>
       <div class="task-actions">
-        <button class="btn btn-secondary" id="userCancel">Cancel</button>
-        <button class="btn btn-primary" id="userCreate">Create</button>
+        <button class="btn btn-secondary" id="pwCancel">Cancel</button>
+        <button class="btn btn-primary" id="pwConfirm">Sign in</button>
       </div>
     </div>
 
@@ -597,6 +637,7 @@
     <script src="js/discover.js"></script>
     <script src="js/quiz.js"></script>
     <script src="js/checklist.js"></script>
+    <script src="js/admin.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

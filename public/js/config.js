@@ -20,9 +20,12 @@ let currentUser = getStoredUser();
 
 function api(url, opts = {}) {
   const headers = { ...(opts.headers || {}) };
-  if (currentUser && currentUser.id) headers["X-User-Id"] = currentUser.id;
+  if (currentUser && currentUser.token)
+    headers["Authorization"] = "Bearer " + currentUser.token;
   return window.fetch(url, { ...opts, headers }).then((res) => {
-    if (res.status === 401 && !url.startsWith("/api/users")) {
+    // 401 = session missing/expired. (A wrong password on /api/login is also 401
+    // but must not log the user out.)
+    if (res.status === 401 && !url.startsWith("/api/login")) {
       try {
         localStorage.removeItem(USER_KEY);
       } catch (e) {}
