@@ -470,7 +470,11 @@ function applyNewWordImage(url) {
 }
 
 async function postWordImage(path, body, okText) {
-  const res = await api(path, { method: "POST", body: JSON.stringify(body) });
+  const res = await api(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   let data = {};
   try {
     data = await res.json();
