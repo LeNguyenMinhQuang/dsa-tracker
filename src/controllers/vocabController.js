@@ -6,6 +6,10 @@ const getGroups = wrap(async (req, res) => {
   res.json(groups);
 });
 
+const createGroup = wrap(async (req, res) => {
+  res.json(await vocabService.createGroup(req.body || {}));
+});
+
 const getWords = wrap(async (req, res) => {
   const words = await vocabService.getWords(req);
   res.json(words);
@@ -17,7 +21,11 @@ const createWord = wrap(async (req, res) => {
 });
 
 const updateWord = wrap(async (req, res) => {
-  const word = await vocabService.updateWord(req, req.params.id, req.body || {});
+  const word = await vocabService.updateWord(
+    req,
+    req.params.id,
+    req.body || {},
+  );
   res.json(word);
 });
 
@@ -30,13 +38,14 @@ const setWordStatus = wrap(async (req, res) => {
   const word = await vocabService.setWordStatus(
     req,
     req.params.id,
-    req.body && req.body.status
+    req.body && req.body.status,
   );
   res.json(word);
 });
 
 module.exports = {
   getGroups,
+  createGroup,
   getWords,
   createWord,
   updateWord,

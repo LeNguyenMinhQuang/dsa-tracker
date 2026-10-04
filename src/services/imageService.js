@@ -59,9 +59,8 @@ function buildPrompt(term, hint, attempt = 0) {
       `Safe for all ages, clean white background, one central subject, no text, no letters.`
     );
   }
-  const meaning = String(hint || "")
-    .trim()
-    .slice(0, 150);
+  const { vi, en } = splitHint(hint);
+  const meaning = vi || en;
   if (!meaning) {
     // No Vietnamese meaning available: same prompt without the meaning lines
     return (
@@ -81,6 +80,9 @@ function buildPrompt(term, hint, attempt = 0) {
     `The image must visually communicate exactly this meaning: "${meaning}".\n\n` +
     `Important requirements:\n` +
     `* Represent the specific meaning given above, NOT another meaning of the English word.\n` +
+    (vi && en
+      ? `* English definition of the intended meaning: "${en}".\n`
+      : "") +
     `* Use a concrete, realistic, immediately understandable scene.\n` +
     `* If it is an action, clearly show the action taking place.\n` +
     `* If it is an object, clearly show the object.\n` +
@@ -101,10 +103,34 @@ function buildPrompt(term, hint, attempt = 0) {
   );
 }
 
-// The hint is the Vietnamese meaning of the word (first definition)
+// The hint carries the Vietnamese meaning and, when the word has one, the English
+// explanation: "nghĩa tiếng Việt||English explanation". Image models understand
+// the English text far better, so it is added to the prompt as extra context.
 function meaningHint(word) {
   const m = ((word && word.meanings) || []).find((x) => x && x.definition);
-  return m ? String(m.definition).trim() : "";
+  if (!m) return "";
+  const vi = String(m.definition).replace(/\|\|/g, " ").trim();
+  const en = String(m.explain || "")
+    .replace(/\|\|/g, " ")
+    .trim();
+  return en ? `${vi}||${en}` : vi;
+}
+
+function splitHint(hint) {
+  const [vi = "", en = ""] = String(hint || "").split("||");
+  return { vi: vi.trim().slice(0, 150), en: en.trim().slice(0, 200) };
+}
+
+// Compact prompt for providers that handle long prompts badly (Pollinations)
+function buildShortPrompt(term, hint) {
+  const { vi, en } = splitHint(hint);
+  const meaning = en || vi;
+  return (
+    `Clear educational flashcard illustration for the English word "${term}"` +
+    (meaning ? `, meaning: ${meaning}` : "") +
+    `. One realistic, easy to understand scene with a single main subject, simple plain background, ` +
+    `friendly modern illustration style, no text, no letters, no watermark, square.`
+  );
 }
 
 async function hmgetChunked(key, fields) {
@@ -439,6 +465,7 @@ const PROVIDERS = {
   },
   pollinations: {
     fn: generateWithPollinations,
+    compact: true, // gets the short prompt
     label: "Pollinations (free, no key)",
     needs: "",
     configured: () => true,
@@ -497,7 +524,7 @@ function providerOptions() {
 
 // A specific provider chosen by the admin is used alone (no silent fallback).
 // "auto" tries env IMAGE_PROVIDERS (default "cloudflare,pollinations") in order.
-async function generateImageBuffer(prompt) {
+async function generateImageBuffer(prompt, shortPrompt = prompt) {
   const setting = await getProviderSetting();
   const order =
     setting !== "auto"
@@ -513,7 +540,7 @@ async function generateImageBuffer(prompt) {
     const p = PROVIDERS[name];
     if (!p) continue;
     try {
-      return await p.fn(prompt);
+      return await p.fn(p.compact ? shortPrompt : prompt);
     } catch (e) {
       lastErr = e;
       if (e.rateLimited) anyRateLimited = true;
@@ -595,7 +622,10 @@ async function generateForTerm(term, hint) {
   try {
     let buffer;
     try {
-      buffer = await generateImageBuffer(buildPrompt(t, hint, 0));
+      buffer = await generateImageBuffer(
+        buildPrompt(t, hint, 0),
+        buildShortPrompt(t, hint),
+      );
     } catch (e) {
       throw httpError(502, "Image generation failed: " + e.message);
     }
@@ -654,7 +684,10 @@ async function processOne() {
   try {
     const hint = await redis.hget(IMAGES_HINTS_KEY, term);
     const attempt = Number((await redis.hget(IMAGES_FAILS_KEY, term)) || 0);
-    const buffer = await generateImageBuffer(buildPrompt(term, hint, attempt));
+    const buffer = await generateImageBuffer(
+      buildPrompt(term, hint, attempt),
+      attempt === 0 ? buildShortPrompt(term, hint) : undefined,
+    );
     const result = await uploadBuffer(buffer, publicIdFor(term));
     await redis.hset(IMAGES_KEY, { [term]: result.secure_url });
     await redis.hdel(IMAGES_HINTS_KEY, term);

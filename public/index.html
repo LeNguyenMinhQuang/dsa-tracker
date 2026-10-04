@@ -318,6 +318,33 @@
       <select class="group-select" id="wordGroupInput">
         <option value="">Uncategorized</option>
       </select>
+      <button type="button" class="btn btn-ghost btn-block" id="addGroupToggle">
+        + New Topic
+      </button>
+      <div class="admin-img-box" id="addGroupBox" style="display: none">
+        <span class="field-label-inline">New topic</span>
+        <input
+          type="text"
+          id="newGroupName"
+          maxlength="40"
+          placeholder="Name, e.g. Travel"
+        />
+        <input
+          type="text"
+          id="newGroupMeaning"
+          maxlength="60"
+          placeholder="Meaning, e.g. du lịch"
+        />
+        <div class="admin-img-row">
+          <button type="button" class="btn btn-secondary" id="newGroupCancel">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" id="newGroupSave">
+            Add topic
+          </button>
+        </div>
+        <div class="admin-note" id="newGroupMsg"></div>
+      </div>
       <label>Meanings</label>
       <div class="meanings-list" id="meaningsList"></div>
       <button type="button" class="btn btn-ghost btn-block" id="addMeaningRow">

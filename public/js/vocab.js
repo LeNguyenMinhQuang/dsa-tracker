@@ -39,6 +39,15 @@ function initVocab() {
     .getElementById("wordGenImage")
     .addEventListener("click", generateWordImage);
   document
+    .getElementById("addGroupToggle")
+    .addEventListener("click", () => toggleGroupBox());
+  document
+    .getElementById("newGroupCancel")
+    .addEventListener("click", () => toggleGroupBox(false));
+  document
+    .getElementById("newGroupSave")
+    .addEventListener("click", saveNewGroup);
+  document
     .getElementById("wordUploadImage")
     .addEventListener("click", () =>
       document.getElementById("wordImageFile").click(),
@@ -338,6 +347,7 @@ function openWordModal(word) {
     : "";
   document.getElementById("wordDelete").style.display = word ? "block" : "none";
   vocab.editingTerm = word ? word.term : null;
+  toggleGroupBox(false);
   // Admin only: generate / upload / delete the illustration of this word
   refreshWordImageAdmin(word);
 
@@ -415,6 +425,45 @@ async function saveWord() {
   if (res.ok) {
     closeWordModal();
     loadWords();
+  }
+}
+
+function toggleGroupBox(show) {
+  const box = document.getElementById("addGroupBox");
+  const open = show === undefined ? box.style.display === "none" : show;
+  box.style.display = open ? "block" : "none";
+  document.getElementById("newGroupMsg").textContent = "";
+  document.getElementById("newGroupMsg").className = "admin-note";
+  if (open) {
+    document.getElementById("newGroupName").value = "";
+    document.getElementById("newGroupMeaning").value = "";
+    document.getElementById("newGroupName").focus();
+  }
+}
+
+async function saveNewGroup() {
+  const name = document.getElementById("newGroupName").value;
+  const meaning = document.getElementById("newGroupMeaning").value;
+  const msg = document.getElementById("newGroupMsg");
+  const btn = document.getElementById("newGroupSave");
+  Loading.busy(btn, true, "Adding...");
+  try {
+    const res = await api("/api/groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, meaning }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      msg.className = "admin-note error";
+      msg.textContent = data.error || "Could not add the topic";
+      return;
+    }
+    await loadGroups(); // refreshes the filter bar and this dropdown
+    document.getElementById("wordGroupInput").value = data.id; // select the new topic
+    toggleGroupBox(false);
+  } finally {
+    Loading.busy(btn, false);
   }
 }
 
@@ -498,13 +547,20 @@ async function generateWordImage() {
   )
     return;
   // Vietnamese meaning = first definition currently typed in the dialog
-  const def = document.querySelector(".meaning-row .m-def");
+  const row = document.querySelector(".meaning-row");
+  const vi = row
+    ? row.querySelector(".m-def").value.replace(/\|\|/g, " ").trim()
+    : "";
+  const en = row
+    ? row.querySelector(".m-explain").value.replace(/\|\|/g, " ").trim()
+    : "";
+  const hint = en ? vi + "||" + en : vi;
   const btn = document.getElementById("wordGenImage");
   Loading.busy(btn, true, "Generating...");
   try {
     await postWordImage(
       "/api/admin/images/generate",
-      { term, hint: def ? def.value.trim() : "" },
+      { term, hint },
       "New image generated.",
     );
   } finally {

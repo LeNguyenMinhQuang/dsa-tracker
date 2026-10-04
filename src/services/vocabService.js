@@ -18,10 +18,46 @@ function validMeanings(meanings) {
 }
 
 async function getGroups() {
-  const groups = Object.values((await redis.get(GROUPS_KEY)) || {}).sort((a, b) =>
-    a.name.localeCompare(b.name),
+  const groups = Object.values((await redis.get(GROUPS_KEY)) || {}).sort(
+    (a, b) => a.name.localeCompare(b.name),
   );
   return groups;
+}
+
+// Add a new topic (shared by every user). Both fields are required because the
+// UI always shows "Name — meaning".
+async function createGroup(body) {
+  const name = String((body && body.name) || "")
+    .trim()
+    .replace(/\s+/g, " ");
+  const meaning = String((body && body.meaning) || "")
+    .trim()
+    .replace(/\s+/g, " ");
+  if (!name || !meaning) {
+    const err = new Error("Topic needs a name and a meaning");
+    err.status = 400;
+    throw err;
+  }
+  if (name.length > 40 || meaning.length > 60) {
+    const err = new Error(
+      "Topic name (max 40) or meaning (max 60) is too long",
+    );
+    err.status = 400;
+    throw err;
+  }
+  const groups = (await redis.get(GROUPS_KEY)) || {};
+  const dup = Object.values(groups).find(
+    (g) => g.name.toLowerCase() === name.toLowerCase(),
+  );
+  if (dup) {
+    const err = new Error(`Topic "${dup.name}" already exists`);
+    err.status = 409;
+    throw err;
+  }
+  const id = "g_" + crypto.randomBytes(4).toString("hex");
+  groups[id] = { id, name, meaning };
+  await redis.set(GROUPS_KEY, groups);
+  return groups[id];
 }
 
 // Queue image generation for a word (shared across users, fire-and-forget)
@@ -144,6 +180,7 @@ async function setWordStatus(req, id, status) {
 
 module.exports = {
   getGroups,
+  createGroup,
   getWords,
   createWord,
   updateWord,
