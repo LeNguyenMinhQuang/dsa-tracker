@@ -36,6 +36,17 @@ function initVocab() {
     .getElementById("wordDeleteImage")
     .addEventListener("click", deleteWordImage);
   document
+    .getElementById("wordGenImage")
+    .addEventListener("click", generateWordImage);
+  document
+    .getElementById("wordUploadImage")
+    .addEventListener("click", () =>
+      document.getElementById("wordImageFile").click(),
+    );
+  document
+    .getElementById("wordImageFile")
+    .addEventListener("change", uploadWordImage);
+  document
     .getElementById("addMeaningRow")
     .addEventListener("click", () => addMeaningRow());
 
@@ -327,11 +338,8 @@ function openWordModal(word) {
     : "";
   document.getElementById("wordDelete").style.display = word ? "block" : "none";
   vocab.editingTerm = word ? word.term : null;
-  // Admin only: remove a wrongly generated illustration of this word
-  document.getElementById("wordDeleteImage").style.display =
-    word && word.imageUrl && typeof isAdmin === "function" && isAdmin()
-      ? "block"
-      : "none";
+  // Admin only: generate / upload / delete the illustration of this word
+  refreshWordImageAdmin(word);
 
   const list = document.getElementById("meaningsList");
   list.innerHTML = "";
@@ -410,6 +418,154 @@ async function saveWord() {
   }
 }
 
+function currentWordImageUrl() {
+  const w = vocab.words.find((x) => x.id === vocab.editingId);
+  return w ? w.imageUrl : null;
+}
+
+function refreshWordImageAdmin(word) {
+  const box = document.getElementById("wordImageAdmin");
+  const show = !!word && typeof isAdmin === "function" && isAdmin();
+  box.style.display = show ? "block" : "none";
+  document.getElementById("wordImageMsg").textContent = "";
+  document.getElementById("wordImageMsg").className = "admin-note";
+  if (!show) return;
+  setWordImagePreview(word.imageUrl);
+}
+
+function setWordImagePreview(url) {
+  const prev = document.getElementById("wordImagePreview");
+  prev.innerHTML = "";
+  if (url) {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = url;
+    prev.appendChild(img);
+  } else {
+    prev.textContent = "No image";
+  }
+  document.getElementById("wordGenImage").textContent = url
+    ? "Regenerate image"
+    : "Generate image";
+  document.getElementById("wordUploadImage").textContent = url
+    ? "Replace with upload"
+    : "Upload image";
+  document.getElementById("wordDeleteImage").style.display = url
+    ? "block"
+    : "none";
+}
+
+function wordImageMessage(text, isError) {
+  const el = document.getElementById("wordImageMsg");
+  el.className = "admin-note" + (isError ? " error" : "");
+  el.textContent = text;
+}
+
+// Shared tail of generate / upload: update caches and refresh the list
+function applyNewWordImage(url) {
+  const w = vocab.words.find((x) => x.id === vocab.editingId);
+  if (w) w.imageUrl = url;
+  setWordImagePreview(url);
+  loadWords(true).catch(() => {});
+}
+
+async function postWordImage(path, body, okText) {
+  const res = await api(path, { method: "POST", body: JSON.stringify(body) });
+  let data = {};
+  try {
+    data = await res.json();
+  } catch (e) {}
+  if (!res.ok) {
+    wordImageMessage(data.error || "Request failed", true);
+    return;
+  }
+  applyNewWordImage(data.url);
+  wordImageMessage(okText, false);
+}
+
+async function generateWordImage() {
+  const term = vocab.editingTerm;
+  if (!term) return;
+  if (
+    currentWordImageUrl() &&
+    !confirm(
+      'Replace the current image of "' + term + '" with a newly generated one?',
+    )
+  )
+    return;
+  // Vietnamese meaning = first definition currently typed in the dialog
+  const def = document.querySelector(".meaning-row .m-def");
+  const btn = document.getElementById("wordGenImage");
+  Loading.busy(btn, true, "Generating...");
+  try {
+    await postWordImage(
+      "/api/admin/images/generate",
+      { term, hint: def ? def.value.trim() : "" },
+      "New image generated.",
+    );
+  } finally {
+    Loading.busy(btn, false);
+    setWordImagePreview(currentWordImageUrl());
+  }
+}
+
+// Shrink the picked file in the browser (max 512px, JPEG) before uploading
+function resizeImageFile(file, max = 512) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.width * scale));
+      c.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read this image"));
+    };
+    img.src = url;
+  });
+}
+
+async function uploadWordImage(e) {
+  const input = e.target;
+  const file = input.files && input.files[0];
+  input.value = "";
+  const term = vocab.editingTerm;
+  if (!file || !term) return;
+  if (!file.type.startsWith("image/")) {
+    wordImageMessage("Please choose an image file", true);
+    return;
+  }
+  if (
+    currentWordImageUrl() &&
+    !confirm('Replace the current image of "' + term + '" with this file?')
+  )
+    return;
+  const btn = document.getElementById("wordUploadImage");
+  Loading.busy(btn, true, "Uploading...");
+  try {
+    const dataUrl = await resizeImageFile(file);
+    await postWordImage(
+      "/api/admin/images/upload",
+      { term, image: dataUrl },
+      "Image uploaded.",
+    );
+  } catch (err) {
+    wordImageMessage(err.message, true);
+  } finally {
+    Loading.busy(btn, false);
+    setWordImagePreview(currentWordImageUrl());
+  }
+}
+
 async function deleteWordImage() {
   if (!vocab.editingTerm) return;
   if (!confirm('Delete the image of "' + vocab.editingTerm + '"?')) return;
@@ -420,8 +576,9 @@ async function deleteWordImage() {
   if (res.ok) {
     const w = vocab.words.find((x) => x.id === vocab.editingId);
     if (w) w.imageUrl = null;
-    closeWordModal();
-    loadWords();
+    setWordImagePreview(null);
+    wordImageMessage("Image deleted.", false);
+    loadWords().catch(() => {}); // full refresh so the card loses its image
   } else {
     let msg = "Could not delete the image";
     try {

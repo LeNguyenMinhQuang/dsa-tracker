@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3131;
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "6mb" })); // admin image upload sends a resized data URL
 app.use(express.static(path.join(__dirname, "public")));
 
 // API Routes

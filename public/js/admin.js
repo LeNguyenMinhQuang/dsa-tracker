@@ -33,6 +33,9 @@ function initAdmin() {
   document
     .getElementById("adminStopImages")
     .addEventListener("click", stopImageGeneration);
+  document
+    .getElementById("adminImageProvider")
+    .addEventListener("change", changeImageProvider);
   document.getElementById("adminNewPass").addEventListener("keydown", (e) => {
     if (e.key === "Enter") addAdminUser();
   });
@@ -229,9 +232,58 @@ function renderImageStatus(s) {
   }
   el.append(count, bar, state);
 
+  renderProviderSelect(s);
   Loading.busy(genBtn, !!s.running, "Generating...");
   stopBtn.style.display = s.running ? "block" : "none";
   stopBtn.disabled = !!s.stopping;
+}
+
+let providerSig = "";
+function renderProviderSelect(s) {
+  const sel = document.getElementById("adminImageProvider");
+  if (!sel || !s.providers) return;
+  const sig = JSON.stringify(s.providers);
+  if (sig !== providerSig) {
+    providerSig = sig;
+    sel.innerHTML = "";
+    s.providers.forEach((p) => {
+      const o = document.createElement("option");
+      o.value = p.id;
+      o.textContent =
+        "Generator: " + p.label + (p.configured ? "" : " — not configured");
+      sel.appendChild(o);
+    });
+  }
+  if (document.activeElement !== sel) sel.value = s.provider;
+  const cur = s.providers.find((p) => p.id === s.provider);
+  const note = document.getElementById("adminProviderNote");
+  if (cur && !cur.configured) {
+    note.className = "admin-note error";
+    note.textContent = "Missing in .env: " + cur.needs;
+  } else if (note.className.includes("error")) {
+    note.className = "admin-note";
+    note.textContent = "";
+  }
+}
+
+async function changeImageProvider() {
+  const sel = document.getElementById("adminImageProvider");
+  const note = document.getElementById("adminProviderNote");
+  try {
+    const s = await adminFetch("/api/admin/images/provider", {
+      method: "PUT",
+      body: JSON.stringify({ provider: sel.value }),
+    });
+    renderImageStatus(s);
+    const cur = s.providers.find((p) => p.id === s.provider);
+    if (cur && cur.configured) {
+      note.className = "admin-note";
+      note.textContent = "Saved. New images will use: " + cur.label;
+    }
+  } catch (e) {
+    note.className = "admin-note error";
+    note.textContent = e.message;
+  }
 }
 
 async function refreshImageStatus(silent = true) {
@@ -311,11 +363,17 @@ async function deleteAllImages() {
   msg.className = "admin-note";
   msg.textContent = "";
   Loading.busy(btn, true, "Deleting...");
+  // Keep the loading overlay up: stopping a running queue can take a moment
   try {
     const r = await adminFetch("/api/admin/images/all", { method: "DELETE" });
-    msg.textContent = r.deleted + " image(s) deleted.";
+    msg.textContent =
+      r.deleted +
+      " image(s) deleted · " +
+      r.queueCleared +
+      " word(s) removed from the queue.";
     renderImageStatus(r.status);
     schedulePolling(r.status);
+    await refreshImageStatus(true); // re-read the real state from the server
     // Refresh the vocabulary list so the removed images disappear
     if (typeof vocab !== "undefined" && typeof loadWords === "function") {
       vocab.words.forEach((w) => (w.imageUrl = null));

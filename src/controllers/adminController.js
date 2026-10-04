@@ -58,6 +58,21 @@ const imageDeleteAll = wrap(async (req, res) => {
   res.json({ ...r, status: await imageService.getStatus() });
 });
 
+const imageGenerate = wrap(async (req, res) => {
+  const { term, hint } = req.body || {};
+  res.json(await imageService.generateForTerm(term, hint));
+});
+
+const imageUpload = wrap(async (req, res) => {
+  const { term, image } = req.body || {};
+  res.json(await imageService.uploadForTerm(term, image));
+});
+
+const imageSetProvider = wrap(async (req, res) => {
+  await imageService.setProviderSetting((req.body || {}).provider);
+  res.json(await imageService.getStatus());
+});
+
 module.exports = {
   listUsers,
   createUser,
@@ -66,6 +81,9 @@ module.exports = {
   imageStatus,
   imageBackfill,
   imageStop,
+  imageGenerate,
+  imageUpload,
+  imageSetProvider,
   imageDeleteOne,
   imageDeleteAll,
 };

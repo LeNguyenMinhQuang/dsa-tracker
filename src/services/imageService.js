@@ -22,6 +22,7 @@ const {
  *  - Redis hash IMAGES_FAILS_KEY:     term -> number of failed attempts
  */
 
+const IMAGES_SETTINGS_KEY = "dsa-tracker:images:settings"; // hash: provider
 const CHUNK = 500;
 const BETWEEN_MS = 2000; // pause between two generations (rate limit friendly)
 const FAIL_DELAY_MS = 15000;
@@ -252,8 +253,18 @@ async function deleteImage(term) {
 }
 
 // Remove EVERY illustration and clear the generation queue.
+// A running worker is stopped first (and awaited) so it cannot write an image
+// or re-queue a word after the wipe.
 async function deleteAllImages() {
-  const count = Number((await redis.hlen(IMAGES_KEY)) || 0);
+  if (worker.running) {
+    worker.stopRequested = true;
+    const t0 = Date.now();
+    while (worker.running && Date.now() - t0 < 90000) await sleep(300);
+  }
+
+  const images = Number((await redis.hlen(IMAGES_KEY)) || 0);
+  const queued = Number((await redis.scard(IMAGES_PENDING_KEY)) || 0);
+
   if (cloudinary.config().cloud_name) {
     try {
       for (let i = 0; i < 50; i++) {
@@ -266,13 +277,18 @@ async function deleteAllImages() {
       console.warn("[images] cloudinary bulk delete failed:", e.message);
     }
   }
-  await redis.del(
-    IMAGES_KEY,
-    IMAGES_PENDING_KEY,
-    IMAGES_HINTS_KEY,
-    IMAGES_FAILS_KEY,
+  await redis.del(IMAGES_KEY);
+  await redis.del(IMAGES_PENDING_KEY);
+  await redis.del(IMAGES_HINTS_KEY);
+  await redis.del(IMAGES_FAILS_KEY);
+
+  worker.lastRun = null;
+  worker.lastBlocked = null;
+  const left = Number((await redis.scard(IMAGES_PENDING_KEY)) || 0);
+  console.log(
+    `[images] deleted all: ${images} image(s), ${queued} queued word(s) cleared`,
   );
-  return { deleted: count };
+  return { deleted: images, queueCleared: queued, queueLeft: left };
 }
 
 /* --------------------------- AI generation --------------------------- */
@@ -338,25 +354,166 @@ async function generateWithPollinations(prompt) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+async function generateWithHuggingFace(prompt) {
+  const token = process.env.HF_TOKEN;
+  if (!token) {
+    const err = new Error("HF_TOKEN is missing");
+    err.rateLimited = true;
+    throw err;
+  }
+  const model =
+    process.env.HF_IMAGE_MODEL || "black-forest-labs/FLUX.1-schnell";
+  const url =
+    process.env.HF_IMAGE_URL ||
+    `https://router.huggingface.co/hf-inference/models/${model}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "image/png",
+    },
+    body: JSON.stringify({ inputs: prompt }),
+    signal: AbortSignal.timeout(90000),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const err = new Error(
+      `HuggingFace HTTP ${res.status} ${text.slice(0, 200)}`,
+    );
+    err.rateLimited =
+      [401, 402, 403, 429].includes(res.status) ||
+      /credit|quota|rate/i.test(text);
+    throw err;
+  }
+  const type = res.headers.get("content-type") || "";
+  if (!type.startsWith("image/"))
+    throw new Error("HuggingFace returned non-image");
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function generateWithOpenAI(prompt) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) {
+    const err = new Error("OPENAI_API_KEY is missing");
+    err.rateLimited = true;
+    throw err;
+  }
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
+      prompt,
+      size: "1024x1024",
+      quality: process.env.OPENAI_IMAGE_QUALITY || "low",
+      n: 1,
+    }),
+    signal: AbortSignal.timeout(120000),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const err = new Error(`OpenAI HTTP ${res.status} ${text.slice(0, 200)}`);
+    err.rateLimited =
+      [401, 402, 403, 429].includes(res.status) ||
+      /quota|billing|insufficient/i.test(text);
+    throw err;
+  }
+  const json = await res.json();
+  const b64 = json && json.data && json.data[0] && json.data[0].b64_json;
+  if (!b64) throw new Error("OpenAI returned no image");
+  return Buffer.from(b64, "base64");
+}
+
+// id -> { fn, label, configured() }
 const PROVIDERS = {
-  cloudflare: generateWithCloudflare,
-  pollinations: generateWithPollinations,
+  cloudflare: {
+    fn: generateWithCloudflare,
+    label: "Cloudflare Workers AI (Flux)",
+    needs: "CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN",
+    configured: () =>
+      !!(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN),
+  },
+  pollinations: {
+    fn: generateWithPollinations,
+    label: "Pollinations (free, no key)",
+    needs: "",
+    configured: () => true,
+  },
+  huggingface: {
+    fn: generateWithHuggingFace,
+    label: "Hugging Face (Flux)",
+    needs: "HF_TOKEN",
+    configured: () => !!process.env.HF_TOKEN,
+  },
+  openai: {
+    fn: generateWithOpenAI,
+    label: "OpenAI (gpt-image-1, paid)",
+    needs: "OPENAI_API_KEY",
+    configured: () => !!process.env.OPENAI_API_KEY,
+  },
 };
 
-// Tries providers in order (env IMAGE_PROVIDERS, default "cloudflare,pollinations")
+// Admin choice stored in Redis: "auto" or one provider id
+async function getProviderSetting() {
+  try {
+    const v = await redis.hget(IMAGES_SETTINGS_KEY, "provider");
+    return v && PROVIDERS[v] ? String(v) : "auto";
+  } catch (e) {
+    return "auto";
+  }
+}
+
+async function setProviderSetting(id) {
+  const v = String(id || "auto");
+  if (v !== "auto" && !PROVIDERS[v]) {
+    const err = new Error("Unknown image provider");
+    err.status = 400;
+    throw err;
+  }
+  await redis.hset(IMAGES_SETTINGS_KEY, { provider: v });
+  return v;
+}
+
+function providerOptions() {
+  return [
+    {
+      id: "auto",
+      label: "Auto (env order, with fallback)",
+      configured: true,
+      needs: "",
+    },
+    ...Object.entries(PROVIDERS).map(([id, p]) => ({
+      id,
+      label: p.label,
+      configured: p.configured(),
+      needs: p.needs,
+    })),
+  ];
+}
+
+// A specific provider chosen by the admin is used alone (no silent fallback).
+// "auto" tries env IMAGE_PROVIDERS (default "cloudflare,pollinations") in order.
 async function generateImageBuffer(prompt) {
-  const order = (process.env.IMAGE_PROVIDERS || "cloudflare,pollinations")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const setting = await getProviderSetting();
+  const order =
+    setting !== "auto"
+      ? [setting]
+      : (process.env.IMAGE_PROVIDERS || "cloudflare,pollinations")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
 
   let lastErr = null;
   let anyRateLimited = false;
   for (const name of order) {
-    const fn = PROVIDERS[name];
-    if (!fn) continue;
+    const p = PROVIDERS[name];
+    if (!p) continue;
     try {
-      return await fn(prompt);
+      return await p.fn(prompt);
     } catch (e) {
       lastErr = e;
       if (e.rateLimited) anyRateLimited = true;
@@ -404,6 +561,73 @@ function uploadBuffer(buffer, publicId) {
     );
     stream.end(buffer);
   });
+}
+
+/* ------------------- per-word generate / upload (admin) -------------------- */
+
+async function storeImage(term, buffer) {
+  const result = await uploadBuffer(buffer, publicIdFor(term));
+  await redis.hset(IMAGES_KEY, { [term]: result.secure_url });
+  await redis.hdel(IMAGES_HINTS_KEY, term);
+  await redis.hdel(IMAGES_FAILS_KEY, term);
+  await redis.srem(IMAGES_PENDING_KEY, `w:${term}`);
+  return result.secure_url;
+}
+
+function httpError(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+}
+
+// Generate (or regenerate) the image of ONE word right now, replacing any
+// existing one. hint = Vietnamese meaning shown in the edit dialog.
+async function generateForTerm(term, hint) {
+  const t = normalizeTerm(term);
+  if (!t) throw httpError(400, "Term is required");
+  const lock = imageLockKey(t);
+  const locked = await redis.set(lock, "1", { nx: true, ex: 180 });
+  if (!locked)
+    throw httpError(
+      409,
+      "This word is already being generated, try again in a moment",
+    );
+  try {
+    let buffer;
+    try {
+      buffer = await generateImageBuffer(buildPrompt(t, hint, 0));
+    } catch (e) {
+      throw httpError(502, "Image generation failed: " + e.message);
+    }
+    let url;
+    try {
+      url = await storeImage(t, buffer);
+    } catch (e) {
+      throw httpError(502, "Upload failed: " + e.message);
+    }
+    return { term: t, url };
+  } finally {
+    await redis.del(lock).catch(() => {});
+  }
+}
+
+// Store an image chosen by the admin (data URL, already resized by the browser)
+async function uploadForTerm(term, dataUrl) {
+  const t = normalizeTerm(term);
+  if (!t) throw httpError(400, "Term is required");
+  const m = /^data:image\/(png|jpe?g|webp|gif);base64,([A-Za-z0-9+/=]+)$/.exec(
+    String(dataUrl || ""),
+  );
+  if (!m)
+    throw httpError(400, "Invalid image (png, jpg, webp or gif expected)");
+  const buffer = Buffer.from(m[2], "base64");
+  if (buffer.length > 3 * 1024 * 1024)
+    throw httpError(413, "Image is too large (max 3 MB)");
+  try {
+    return { term: t, url: await storeImage(t, buffer) };
+  } catch (e) {
+    throw httpError(502, "Upload failed: " + e.message);
+  }
 }
 
 /* ------------------------------- worker ------------------------------ */
@@ -566,6 +790,8 @@ async function getStatus() {
     images: Number(images || 0),
     running: worker.running,
     stopping: worker.stopRequested,
+    provider: await getProviderSetting(),
+    providers: providerOptions(),
     currentTerm: worker.currentTerm,
     run: worker.run,
     lastRun: worker.lastRun,
@@ -579,6 +805,9 @@ module.exports = {
   meaningHint,
   deleteImage,
   deleteAllImages,
+  generateForTerm,
+  uploadForTerm,
+  setProviderSetting,
   enqueueTerms,
   pendingCount,
   collectAllWordItems,

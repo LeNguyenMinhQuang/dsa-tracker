@@ -14,6 +14,9 @@ router.put("/admin/users/:id/password", adminController.setPassword);
 
 router.get("/admin/images/status", adminController.imageStatus);
 router.post("/admin/images/backfill", adminController.imageBackfill);
+router.post("/admin/images/generate", adminController.imageGenerate);
+router.post("/admin/images/upload", adminController.imageUpload);
+router.put("/admin/images/provider", adminController.imageSetProvider);
 router.post("/admin/images/stop", adminController.imageStop);
 router.delete("/admin/images/all", adminController.imageDeleteAll);
 router.delete("/admin/images", adminController.imageDeleteOne);

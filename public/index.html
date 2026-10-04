@@ -184,6 +184,13 @@
       <label>New problems per day</label>
       <input type="number" id="newCountInput" min="0" value="1" />
 
+      <span class="field-label-inline">Animations</span>
+      <select id="motionSetting" aria-label="Animations">
+        <option value="system">Follow system setting</option>
+        <option value="on">Always on</option>
+        <option value="off">Off</option>
+      </select>
+
       <span class="field-label-inline"
         >Review intervals (days after initial completion)</span
       >
@@ -245,6 +252,8 @@
         <div class="import-error" id="adminUserError"></div>
 
         <span class="field-label-inline">Word illustrations</span>
+        <select id="adminImageProvider" aria-label="Image generator"></select>
+        <div class="admin-note" id="adminProviderNote"></div>
         <div class="q-box" id="adminImageStatus">—</div>
         <label class="test-setup-option admin-check">
           <input type="checkbox" id="adminRetryFailed" />
@@ -326,14 +335,28 @@
       >
         Delete Word
       </button>
-      <button
-        type="button"
-        class="delete-link"
-        id="wordDeleteImage"
-        style="display: none"
-      >
-        Delete Image (admin)
-      </button>
+      <div class="admin-img-box" id="wordImageAdmin" style="display: none">
+        <span class="field-label-inline">Image (admin)</span>
+        <div class="admin-img-preview" id="wordImagePreview"></div>
+        <div class="admin-img-row">
+          <button type="button" class="btn btn-secondary" id="wordGenImage">
+            Generate image
+          </button>
+          <button type="button" class="btn btn-secondary" id="wordUploadImage">
+            Upload image
+          </button>
+        </div>
+        <input type="file" id="wordImageFile" accept="image/*" hidden />
+        <button
+          type="button"
+          class="delete-link"
+          id="wordDeleteImage"
+          style="display: none"
+        >
+          Delete Image
+        </button>
+        <div class="admin-note" id="wordImageMsg"></div>
+      </div>
     </div>
 
     <!-- Test setup modal -->
@@ -675,6 +698,9 @@
     <script src="js/quiz.js"></script>
     <script src="js/checklist.js"></script>
     <script src="js/admin.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="js/motion.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

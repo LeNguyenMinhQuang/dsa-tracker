@@ -130,11 +130,17 @@ const Loading = (() => {
       topBar.classList.add("on");
     }, TOP_DELAY);
 
-    const overlayTimer = setTimeout(() => {
-      if (finished) return;
-      active.set(token, { label: label || (isRead ? "Loading" : "Saving"), sub: "" });
-      open();
-    }, isRead ? READ_DELAY : MUTATION_DELAY);
+    const overlayTimer = setTimeout(
+      () => {
+        if (finished) return;
+        active.set(token, {
+          label: label || (isRead ? "Loading" : "Saving"),
+          sub: "",
+        });
+        open();
+      },
+      isRead ? READ_DELAY : MUTATION_DELAY,
+    );
 
     return {
       done() {
@@ -180,8 +186,12 @@ function loadingLabelFor(url, method) {
   if (u.startsWith("/api/login")) return "Signing in";
   if (u.startsWith("/api/admin/images/backfill")) return "Scanning words";
   if (u.startsWith("/api/admin/images/stop")) return "Stopping";
+  if (u.startsWith("/api/admin/images/generate")) return "Generating image";
+  if (u.startsWith("/api/admin/images/upload")) return "Uploading image";
+  if (u.startsWith("/api/admin/images/provider")) return "Saving setting";
   if (u.startsWith("/api/admin/images/all")) return "Deleting all images";
-  if (u.startsWith("/api/admin/images")) return m === "DELETE" ? "Deleting image" : "Loading";
+  if (u.startsWith("/api/admin/images"))
+    return m === "DELETE" ? "Deleting image" : "Loading";
   if (u.startsWith("/api/admin/users")) {
     if (u.endsWith("/password")) return "Saving password";
     if (m === "POST") return "Creating user";
