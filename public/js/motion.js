@@ -52,6 +52,24 @@
     // Modal: stamped onto the page, shadow collapses, content steps in
     function modalIn(m) {
       gsap.killTweensOf([m, ...m.children]);
+      // Phones: Settings is full-screen (CSS), so slide it up like a sheet
+      // instead of the centred stamp, which would fight the full-screen layout
+      if (
+        m.id === "settingsModal" &&
+        window.matchMedia("(max-width: 600px)").matches
+      ) {
+        gsap.fromTo(
+          m,
+          { clipPath: "inset(100% 0 0 0)", autoAlpha: 1 },
+          {
+            clipPath: "inset(0% 0 0 0)",
+            duration: 0.35,
+            ease: "power4.out",
+            clearProps: "clipPath",
+          },
+        );
+        return;
+      }
       gsap.fromTo(
         m,
         {

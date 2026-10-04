@@ -158,3 +158,33 @@
     align-items: center;
   }
 }
+
+/* Phones: the Settings dialog fills the whole screen (no offset / cut-off edges) */
+@media (max-width: 600px) {
+  #settingsModal {
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    height: 100vh; /* fallback */
+    height: 100dvh; /* real visible height, ignores the browser toolbars */
+    max-height: none;
+    margin: 0;
+    padding: 16px 14px calc(28px + env(safe-area-inset-bottom, 0px));
+    border: 0;
+    box-shadow: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    /* GSAP writes an inline translate(-50%,-50%) for centred modals: cancel it */
+    transform: none !important;
+  }
+  #settingsModal h2 {
+    position: sticky;
+    top: -16px;
+    z-index: 3;
+    margin: -16px -14px 14px;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 14px 10px;
+    background: var(--sheet);
+  }
+}
