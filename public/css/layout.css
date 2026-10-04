@@ -112,9 +112,14 @@
 
 .modal {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  /* centred without transform: inset + auto margins + fit-content height.
+     GSAP never has to touch (or fight) the modal's position. */
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
   display: none;
   width: min(340px, 92vw);
   padding: 20px;
@@ -141,8 +146,6 @@
 }
 .modal-wide {
   width: min(460px, 92vw);
-  max-height: 88vh;
-  overflow-y: auto;
 }
 
 @media (max-width: 480px) {
@@ -162,8 +165,7 @@
 /* Phones: the Settings dialog fills the whole screen (no offset / cut-off edges) */
 @media (max-width: 600px) {
   #settingsModal {
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
     max-width: none;
     height: 100vh; /* fallback */
@@ -176,8 +178,6 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    /* GSAP writes an inline translate(-50%,-50%) for centred modals: cancel it */
-    transform: none !important;
   }
   #settingsModal h2 {
     position: sticky;

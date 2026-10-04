@@ -49,58 +49,21 @@
      *    Closing stays instant on purpose: hard cuts are part of the look.
      * ------------------------------------------------------------- */
 
-    // Modal: stamped onto the page, shadow collapses, content steps in
+    // Modal: hard wipe from the top, in steps. Only clip-path is animated, so the
+    // modal's position (centred by CSS) is never touched; this is also much
+    // cheaper than animating a shadow variable or many children on Android.
     function modalIn(m) {
-      gsap.killTweensOf([m, ...m.children]);
-      // Phones: Settings is full-screen (CSS), so slide it up like a sheet
-      // instead of the centred stamp, which would fight the full-screen layout
-      if (
-        m.id === "settingsModal" &&
-        window.matchMedia("(max-width: 600px)").matches
-      ) {
-        gsap.fromTo(
-          m,
-          { clipPath: "inset(100% 0 0 0)", autoAlpha: 1 },
-          {
-            clipPath: "inset(0% 0 0 0)",
-            duration: 0.35,
-            ease: "power4.out",
-            clearProps: "clipPath",
-          },
-        );
-        return;
-      }
+      gsap.killTweensOf(m);
       gsap.fromTo(
         m,
+        { clipPath: "inset(0 0 100% 0)" },
         {
-          xPercent: -50,
-          yPercent: -50,
-          y: -36,
-          scale: 1.06,
-          rotation: -1.2,
-          autoAlpha: 0,
-          "--sh": 24,
-        },
-        {
-          xPercent: -50,
-          yPercent: -50,
-          y: 0,
-          scale: 1,
-          rotation: 0,
-          autoAlpha: 1,
-          "--sh": 6,
+          clipPath: "inset(0 0 0% 0)",
           duration: 0.28,
+          ease: "steps(7)",
+          clearProps: "clipPath",
         },
       );
-      gsap.from(m.children, {
-        y: 14,
-        autoAlpha: 0,
-        duration: 0.22,
-        delay: 0.06,
-        ease: "power3.out",
-        stagger: { amount: 0.2 },
-        clearProps: "opacity,visibility,transform",
-      });
     }
 
     // Full-screen stages (test / discover / quiz): wipe down like a curtain
@@ -131,14 +94,13 @@
       );
       gsap.fromTo(
         box,
-        { scale: 1.12, y: -24, rotation: -2.5, autoAlpha: 0, "--sh": 26 },
+        { scale: 1.1, y: -20, autoAlpha: 0 },
         {
           scale: 1,
           y: 0,
-          rotation: 0,
           autoAlpha: 1,
-          "--sh": 8,
-          duration: 0.26,
+          duration: 0.24,
+          clearProps: "transform",
         },
       );
       if (label) {
