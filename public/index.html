@@ -133,6 +133,14 @@
             <button class="btn btn-secondary" id="discoverBtn">
               Discover Words
             </button>
+            <button class="btn btn-secondary" id="ktestBtn">
+              Test
+              <span
+                class="badge-count"
+                id="ktestBadge"
+                style="display: none"
+              ></span>
+            </button>
           </div>
 
           <div class="vocab-stats" id="vocabStats"></div>
@@ -525,6 +533,19 @@
       </div>
     </div>
 
+    <!-- Known-words test stage -->
+    <div class="overlay" id="ktestOverlay"></div>
+    <div class="test-stage ktest-stage" id="ktestStage">
+      <div class="test-header">
+        <div class="test-progress" id="ktestProgress">Test</div>
+        <button class="icon-btn" id="ktestClose">✕</button>
+      </div>
+      <div class="ktest-scroll" id="ktestScroll"></div>
+      <div class="ktest-footer" id="ktestFooter" style="display: none">
+        <button class="btn btn-primary btn-block" id="ktestGrade">Grade</button>
+      </div>
+    </div>
+
     <!-- Quiz setup modal -->
     <div class="overlay" id="quizSetupOverlay"></div>
     <div class="modal" id="quizSetupModal">
@@ -726,6 +747,7 @@
     <script src="js/flashcards.js"></script>
     <script src="js/discover.js"></script>
     <script src="js/quiz.js"></script>
+    <script src="js/known-test.js"></script>
     <script src="js/checklist.js"></script>
     <script src="js/admin.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>

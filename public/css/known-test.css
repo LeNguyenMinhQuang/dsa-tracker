@@ -1,0 +1,160 @@
+/* Known-words test (button next to Discover Words) */
+
+.ktest-stage.show {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+}
+.ktest-stage .test-header {
+  flex: none;
+}
+.ktest-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.ktest-footer {
+  flex: none;
+  margin-top: 12px;
+}
+
+.ktest-panel {
+  padding: 4px 0;
+}
+.ktest-title {
+  margin: 0 0 10px;
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: 1.4rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+.ktest-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mute);
+}
+.ktest-note .btn {
+  display: inline-block;
+  flex: none;
+  margin-left: 8px;
+  padding: 6px 10px;
+}
+.ktest-warn {
+  color: var(--red);
+}
+.ktest-pct {
+  margin-bottom: 10px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.ktest-panel .test-done-title {
+  text-align: center;
+}
+.ktest-panel .ktest-note {
+  text-align: center;
+}
+
+/* questions */
+.ktest-q {
+  padding: 12px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+.ktest-q + .ktest-q {
+  margin-top: -2px;
+}
+.ktest-q-num {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--red);
+}
+.ktest-q-term {
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: clamp(1.6rem, 8vw, 2.2rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+.ktest-q-term.ktest-q-vi {
+  font-size: clamp(1.1rem, 5vw, 1.4rem);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+.ktest-q-pron {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--mute);
+}
+.ktest-q .speak-group {
+  display: inline-flex;
+  margin-top: 8px;
+}
+.ktest-options {
+  margin-top: 12px;
+}
+.quiz-option-btn.selected,
+.quiz-option-btn.selected:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* result */
+.ktest-wrong-head {
+  margin: 8px 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.ktest-wrong-list {
+  margin-bottom: 16px;
+}
+.ktest-wrong-item {
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+.ktest-wrong-item + .ktest-wrong-item {
+  margin-top: -2px;
+}
+.ktest-wrong-term {
+  font-family: var(--head);
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.ktest-wrong-pron {
+  margin-left: 6px;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--mute);
+}
+.ktest-wrong-def {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.ktest-wrong-yours {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--red);
+  word-break: break-word;
+}

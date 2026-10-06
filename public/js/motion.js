@@ -151,7 +151,7 @@
     const RULES = [
       { sel: ".modal", cls: "show", fn: modalIn },
       {
-        sel: "#testStage, #discoverStage, #quizStage",
+        sel: "#testStage, #discoverStage, #quizStage, #ktestStage",
         cls: "show",
         fn: wipeIn,
       },

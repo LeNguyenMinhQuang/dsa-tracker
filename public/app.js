@@ -1,6 +1,8 @@
 function init() {
   document.getElementById("userLabel").textContent =
-    "USER / " + currentUser.name + (currentUser.role === "admin" ? " [ADMIN]" : "");
+    "USER / " +
+    currentUser.name +
+    (currentUser.role === "admin" ? " [ADMIN]" : "");
   document
     .getElementById("switchUserBtn")
     .addEventListener("click", switchUser);
@@ -40,6 +42,7 @@ function init() {
   initFlashcards();
   initDiscover();
   initQuiz();
+  initKnownTest();
   initChecklist();
   initAdmin();
 }
